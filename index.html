@@ -27,7 +27,6 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 .seg{display:flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin-top:6px}
 .seg button{flex:1;padding:12px 0;background:var(--bg);border:0;color:var(--text);font-size:15px;font-weight:700}
 .seg button.on{background:var(--acc);color:#1d0b00}
-.f select{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:16px;background:var(--bg);color:var(--text)}
 .manual{display:none;margin-top:6px}
 .err{border-color:#d93025 !important}
 .sub{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 4px;margin-bottom:10px}
@@ -66,10 +65,52 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
   <div class="f"><label>Fahrt-Nr</label><input id="fn" inputmode="numeric"></div>
   <div class="f"><label>Auftragsnummer</label><input id="an" inputmode="numeric"></div>
  </div>
+ 
  <div class="row">
-  <div class="f"><label>Von *</label><select id="von"></select><input id="vonX" class="manual" placeholder="Ort eingeben" autocapitalize="characters"></div>
-  <div class="f"><label>Nach *</label><select id="nach"></select><input id="nachX" class="manual" placeholder="Ort eingeben" autocapitalize="characters"></div>
+  <div class="f"><label>Von *</label><input list="yerler" id="von" autocomplete="off" placeholder="Tippen oder wählen" autocapitalize="characters"></div>
+  <div class="f"><label>Nach *</label><input list="yerler" id="nach" autocomplete="off" placeholder="Tippen oder wählen" autocapitalize="characters"></div>
  </div>
+ <datalist id="yerler">
+  <option value="BETTENDUSCHER">
+  <option value="CCIS">
+  <option value="CMR">
+  <option value="CST">
+  <option value="CTA">
+  <option value="CTB">
+  <option value="CTT">
+  <option value="DCC">
+  <option value="DSV">
+  <option value="DUSS">
+  <option value="EDEKA">
+  <option value="EKOM">
+  <option value="EUGS">
+  <option value="FIEGE">
+  <option value="FREUDENBERG">
+  <option value="HCCR">
+  <option value="HCS">
+  <option value="HKL">
+  <option value="KRAUSELAGER">
+  <option value="KTH">
+  <option value="LAGERHAUS">
+  <option value="LTHCHASSIS">
+  <option value="LTM">
+  <option value="MEDREPAIR">
+  <option value="MONDELEZ">
+  <option value="NEUKIRCH">
+  <option value="POCO">
+  <option value="PRAHL&BARSOE">
+  <option value="REMAIN">
+  <option value="S&O">
+  <option value="SCANGLOBAL">
+  <option value="TANKFELD">
+  <option value="TCO">
+  <option value="TWS">
+  <option value="UCS">
+  <option value="UNIKAI">
+  <option value="UNITAINER">
+  <option value="VETR">
+ </datalist>
+
  <div class="f"><label>Größe</label>
   <div class="seg" id="sSize"><button data-v="20" class="on">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
  </div>
@@ -100,15 +141,12 @@ const $=id=>document.getElementById(id);
 const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const V={size:"20",typ1:"DC",typ2:"DC",lv:"L"};
-const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTT","DCC","DSV","DUSS","EDEKA","EKOM","EUGS","FIEGE","FREUDENBERG","HCCR","HCS","HKL","KRAUSELAGER","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH","POCO","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TCO","TWS","UCS","UNIKAI","UNITAINER","VETR"];
-function fillLoc(id){
- const sel=$(id),man=$(id+"X");
- sel.innerHTML='<option value="">— wählen —</option>'+LOCS.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("")+'<option value="__other">Andere (manuell eingeben)</option>';
- sel.addEventListener("change",()=>{const o=sel.value==="__other";man.style.display=o?"block":"none";if(o)man.focus();sel.classList.remove("err")});
- man.addEventListener("input",()=>man.classList.remove("err"));
-}
-function locVal(id){const v=$(id).value;return v==="__other"?$(id+"X").value.trim().toUpperCase():v}
-fillLoc("von");fillLoc("nach");
+
+function locVal(id){return $(id).value.trim().toUpperCase()}
+
+$("von").addEventListener("input",()=>$("von").classList.remove("err"));
+$("nach").addEventListener("input",()=>$("nach").classList.remove("err"));
+
 let fnTouched=false;
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
@@ -144,13 +182,13 @@ $("save").addEventListener("click",()=>{
  if(!fz||!fa){toast("Fahrzeug und Fahrer eingeben");return}
  const von=locVal("von"),nach=locVal("nach");
  if(!von||!nach){
-  if(!von)$($("von").value==="__other"?"vonX":"von").classList.add("err");
-  if(!nach)$($("nach").value==="__other"?"nachX":"nach").classList.add("err");
+  if(!von)$("von").classList.add("err");
+  if(!nach)$("nach").classList.add("err");
   toast("Von und Nach sind Pflichtfelder");return
  }
  ["fz","fa","ag"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
  const two=V.size==="2x20";
- const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value||today(),tag:$("tg").value,
+ const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value\vert{}\vert{}today(),tag:$("tg").value,
   fahrzeug:fz,fahrer:fa,auftraggeber:$("ag").value.trim(),fahrtnr:$("fn").value.trim(),von:von,nach:nach,
   groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),typ1:V.typ1,
   container2:two?$("cn2").value.trim().toUpperCase():"",typ2:two?V.typ2:"",
@@ -158,7 +196,6 @@ $("save").addEventListener("click",()=>{
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
  ["von","nach","cn1","cn2","ch","an","bm"].forEach(id=>$(id).value="");
- ["vonX","nachX"].forEach(id=>{$(id).value="";$(id).style.display="none"});
  V.size="20";V.lv="L";setSeg("sSize","20");setSeg("sLV","L");onSize();
  fnTouched=false;autoFn();
  render();toast("Gespeichert");flush();
