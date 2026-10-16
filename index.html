@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b3c49">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>FrachtLog</title>
+<style>
+:root{--deep:#0b3c49;--acc:#ff7a30;--acc2:#e2631a;--bg:#eef3f4;--card:#fff;--text:#0b2a33;--sub:#567680;--line:#d3e0e3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:var(--deep);color:#fff;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:19px}
+#net{font-size:12px;padding:4px 9px;border-radius:12px;background:#1f7a3d}
+#net.off{background:#b3541e}
+main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-inset-bottom,0px))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--sub)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f{margin-bottom:10px}
+.f label{display:block;font-size:12.5px;color:var(--sub);margin-bottom:4px;font-weight:600}
+.f input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:16px;background:var(--bg);color:var(--text)}
+.f input:focus{outline:none;border-color:var(--acc)}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin-top:6px}
+.seg button{flex:1;padding:12px 0;background:var(--bg);border:0;color:var(--text);font-size:15px;font-weight:700}
+.seg button.on{background:var(--acc);color:#1d0b00}
+.f select{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:16px;background:var(--bg);color:var(--text)}
+.manual{display:none;margin-top:6px}
+.err{border-color:#d93025 !important}
+.sub{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 4px;margin-bottom:10px}
+.sub .f{margin-bottom:6px}
+.btn{width:100%;padding:15px;background:var(--acc);color:#1d0b00;border:0;border-radius:9px;font-size:17px;font-weight:800}
+.btn:active{background:var(--acc2)}
+.e{border-bottom:1px solid var(--line);padding:9px 0;font-size:14px}
+.e:last-child{border:0}
+.e .t{display:flex;justify-content:space-between;font-weight:700}
+.e .m{color:var(--sub);font-size:13px;margin-top:2px}
+.empty{color:var(--sub);text-align:center;padding:14px 0;font-size:14px}
+#warn{display:none;background:#fff3cd;border:1px solid #f0c95c;color:#5c4400;padding:10px;border-radius:9px;margin-bottom:12px;font-size:13px}
+#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--deep);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header><h1>🚛 FrachtLog</h1><span id="net">online</span></header>
+<main>
+<div id="warn">Backend nicht verbunden: In der Datei index.html die Variable SCRIPT_URL eintragen.</div>
+
+<div class="card"><h2>Fahrt</h2>
+ <div class="row">
+  <div class="f"><label>Fahrzeug</label><input id="fz" placeholder="HH OL 1122" autocapitalize="characters"></div>
+  <div class="f"><label>Fahrer</label><input id="fa" placeholder="Name"></div>
+ </div>
+ <div class="row">
+  <div class="f"><label>Datum</label><input id="dt" type="date"></div>
+  <div class="f"><label>Tag</label><input id="tg" readonly></div>
+ </div>
+ <div class="f"><label>Auftraggeber</label><input id="ag" placeholder="z. B. LTH"></div>
+</div>
+
+<div class="card"><h2>Fahrstrecke &amp; Container</h2>
+ <div class="row">
+  <div class="f"><label>Fahrt-Nr</label><input id="fn" inputmode="numeric"></div>
+  <div class="f"><label>Auftragsnummer</label><input id="an" inputmode="numeric"></div>
+ </div>
+ <div class="row">
+  <div class="f"><label>Von *</label><select id="von"></select><input id="vonX" class="manual" placeholder="Ort eingeben" autocapitalize="characters"></div>
+  <div class="f"><label>Nach *</label><select id="nach"></select><input id="nachX" class="manual" placeholder="Ort eingeben" autocapitalize="characters"></div>
+ </div>
+ <div class="f"><label>Größe</label>
+  <div class="seg" id="sSize"><button data-v="20" class="on">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
+ </div>
+ <div class="sub">
+  <div class="f"><label id="l1">Container-Nr.</label><input id="cn1" placeholder="CMAU 0307007" autocapitalize="characters">
+   <div class="seg" id="sTyp1"><button data-v="DC" class="on">DC</button><button data-v="HC">HC</button></div></div>
+ </div>
+ <div class="sub" id="box2" style="display:none">
+  <div class="f"><label>Container 2</label><input id="cn2" placeholder="CGMU 5792562" autocapitalize="characters">
+   <div class="seg" id="sTyp2"><button data-v="DC" class="on">DC</button><button data-v="HC">HC</button></div></div>
+ </div>
+ <div class="f"><label>L / V</label><div class="seg" id="sLV"><button data-v="L" class="on">L (Leer)</button><button data-v="V">V (Voll)</button></div></div>
+ <div class="f"><label>Chassis</label><input id="ch" autocapitalize="characters"></div>
+ <div class="f"><label>Bemerkungen / Wartezeiten</label><input id="bm"></div>
+ <button class="btn" id="save">Eintrag speichern</button>
+</div>
+
+<div class="card"><h2>Meine Einträge heute</h2><div id="list"><div class="empty">Noch keine Einträge</div></div></div>
+</main>
+<div id="toast"></div>
+
+<script>
+/* ====== HIER ANPASSEN ====== */
+const SCRIPT_URL="https://script.google.com/macros/s/AKfycbz2CEVC2KVzwxQd4MS2XXfdFymO3GZaPSbohNURPBTygxCKQR7Gt7kA50_0uqObpbNC/exec";
+const SECRET="frachtlog-n7q4x2"; /* muss identisch mit SECRET im Apps-Script sein */
+/* =========================== */
+const $=id=>document.getElementById(id);
+const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const V={size:"20",typ1:"DC",typ2:"DC",lv:"L"};
+const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTT","DCC","DSV","DUSS","EDEKA","EKOM","EUGS","FIEGE","FREUDENBERG","HCCR","HCS","HKL","KRAUSELAGER","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH","POCO","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TCO","TWS","UCS","UNIKAI","UNITAINER","VETR"];
+function fillLoc(id){
+ const sel=$(id),man=$(id+"X");
+ sel.innerHTML='<option value="">— wählen —</option>'+LOCS.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("")+'<option value="__other">Andere (manuell eingeben)</option>';
+ sel.addEventListener("change",()=>{const o=sel.value==="__other";man.style.display=o?"block":"none";if(o)man.focus();sel.classList.remove("err")});
+ man.addEventListener("input",()=>man.classList.remove("err"));
+}
+function locVal(id){const v=$(id).value;return v==="__other"?$(id+"X").value.trim().toUpperCase():v}
+fillLoc("von");fillLoc("nach");
+let fnTouched=false;
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+function esc(s){return String(s==null?"":s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]))}
+function setTag(){const v=$("dt").value;$("tg").value=v?TAGE[new Date(v+"T12:00:00").getDay()]:""}
+function setSeg(id,v){$(id).querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v))}
+function seg(id,key,cb){$(id).addEventListener("click",e=>{if(e.target.tagName!=="BUTTON")return;V[key]=e.target.dataset.v;setSeg(id,V[key]);if(cb)cb()})}
+function onSize(){
+ const two=V.size==="2x20";
+ $("box2").style.display=two?"block":"none";
+ $("l1").textContent=two?"Container 1":"Container-Nr.";
+ const d=V.size==="45"?"HC":"DC";V.typ1=d;V.typ2=d;setSeg("sTyp1",d);setSeg("sTyp2",d);
+}
+function nextFn(){
+ const fz=$("fz").value.trim(),fa=$("fa").value.trim(),dt=$("dt").value;
+ const h=ls.get("fl_h",[]).filter(e=>e.datum===dt&&e.fahrer===fa&&e.fahrzeug===fz);
+ const n=h.map(e=>parseInt(e.fahrtnr)).filter(x=>!isNaN(x));
+ return String(Math.max(h.length,...n,0)+1);
+}
+function autoFn(){if(!fnTouched)$("fn").value=nextFn()}
+
+if(SCRIPT_URL.indexOf("HIER_")===0)$("warn").style.display="block";
+$("dt").value=today();setTag();
+["fz","fa","ag"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
+seg("sSize","size",onSize);seg("sTyp1","typ1");seg("sTyp2","typ2");seg("sLV","lv");
+$("dt").addEventListener("input",()=>{setTag();autoFn()});
+$("fz").addEventListener("input",autoFn);$("fa").addEventListener("input",autoFn);
+$("fn").addEventListener("input",()=>{fnTouched=true});
+autoFn();
+
+$("save").addEventListener("click",()=>{
+ const fz=$("fz").value.trim(),fa=$("fa").value.trim();
+ if(!fz||!fa){toast("Fahrzeug und Fahrer eingeben");return}
+ const von=locVal("von"),nach=locVal("nach");
+ if(!von||!nach){
+  if(!von)$($("von").value==="__other"?"vonX":"von").classList.add("err");
+  if(!nach)$($("nach").value==="__other"?"nachX":"nach").classList.add("err");
+  toast("Von und Nach sind Pflichtfelder");return
+ }
+ ["fz","fa","ag"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
+ const two=V.size==="2x20";
+ const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value||today(),tag:$("tg").value,
+  fahrzeug:fz,fahrer:fa,auftraggeber:$("ag").value.trim(),fahrtnr:$("fn").value.trim(),von:von,nach:nach,
+  groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),typ1:V.typ1,
+  container2:two?$("cn2").value.trim().toUpperCase():"",typ2:two?V.typ2:"",
+  lv:V.lv,chassis:$("ch").value.trim().toUpperCase(),auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false};
+ ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
+ ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
+ ["von","nach","cn1","cn2","ch","an","bm"].forEach(id=>$(id).value="");
+ ["vonX","nachX"].forEach(id=>{$(id).value="";$(id).style.display="none"});
+ V.size="20";V.lv="L";setSeg("sSize","20");setSeg("sLV","L");onSize();
+ fnTouched=false;autoFn();
+ render();toast("Gespeichert");flush();
+});
+
+let busy=false;
+async function flush(){
+ if(busy||SCRIPT_URL.indexOf("HIER_")===0)return;
+ const q=ls.get("fl_q",[]);if(!q.length)return;
+ busy=true;const rest=[];
+ for(const e of q){
+  try{
+   const r=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({},e,{secret:SECRET}))});
+   const j=await r.json();
+   if(j.status==="ok"||j.status==="dup"){const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h)}
+   else rest.push(e);
+  }catch(x){rest.push(e)}
+ }
+ ls.set("fl_q",rest);busy=false;render();
+}
+function render(){
+ const h=ls.get("fl_h",[]).filter(e=>e.datum===today());
+ $("list").innerHTML=h.length?h.map(e=>{
+  const c=e.groesse==="2x20"?`${esc(e.container1)||"—"} ${esc(e.typ1)} + ${esc(e.container2)||"—"} ${esc(e.typ2)}`:`${esc(e.container1)||"—"} ${esc(e.typ1)}`;
+  return `<div class="e"><div class="t"><span>${e.fahrtnr?"#"+esc(e.fahrtnr)+" ":""}${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
+  <div class="m">${c} · ${esc(e.groesse)} · ${esc(e.lv)}${e.auftragsnummer?" · "+esc(e.auftragsnummer):""}</div></div>`}).join(""):'<div class="empty">Noch keine Einträge</div>';
+}
+function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
+window.addEventListener("online",()=>{net();flush()});window.addEventListener("offline",net);
+net();render();flush();setInterval(flush,30000);
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
