@@ -20,7 +20,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
 .card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--sub)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.f{margin-bottom:10px}
+.f{margin-bottom:10px; position:relative;}
 .f label{display:block;font-size:12.5px;color:var(--sub);margin-bottom:4px;font-weight:600}
 .f input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:16px;background:var(--bg);color:var(--text)}
 .f input:focus{outline:none;border-color:var(--acc)}
@@ -40,6 +40,12 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 #warn{display:none;background:#fff3cd;border:1px solid #f0c95c;color:#5c4400;padding:10px;border-radius:9px;margin-bottom:12px;font-size:13px}
 #toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--deep);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s}
 #toast.show{opacity:1}
+
+/* Yeni Kusursuz Arama Menüsü Tasarımı */
+.sugg {display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; max-height:200px; overflow-y:auto; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-top:4px;}
+.sugg div {padding:12px; border-bottom:1px solid var(--line); font-size:15px; color:var(--text); cursor:pointer;}
+.sugg div:last-child {border-bottom:0;}
+.sugg div:active {background:var(--bg);}
 </style>
 </head>
 <body>
@@ -66,50 +72,17 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
  </div>
  
  <div class="row">
-  <div class="f"><label>Von *</label><input id="von" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters"></div>
-  <div class="f"><label>Nach *</label><input id="nach" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters"></div>
+  <div class="f">
+   <label>Von *</label>
+   <input id="von" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters">
+   <div id="von-sugg" class="sugg"></div>
+  </div>
+  <div class="f">
+   <label>Nach *</label>
+   <input id="nach" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters">
+   <div id="nach-sugg" class="sugg"></div>
+  </div>
  </div>
- 
- <datalist id="yerler">
-  <option value="BETTENDUSCHER">
-  <option value="CCIS">
-  <option value="CMR">
-  <option value="CST">
-  <option value="CTA">
-  <option value="CTB">
-  <option value="CTT">
-  <option value="DCC">
-  <option value="DSV">
-  <option value="DUSS">
-  <option value="EDEKA">
-  <option value="EKOM">
-  <option value="EUGS">
-  <option value="FIEGE">
-  <option value="FREUDENBERG">
-  <option value="HCCR">
-  <option value="HCS">
-  <option value="HKL">
-  <option value="KRAUSELAGER">
-  <option value="KTH">
-  <option value="LAGERHAUS">
-  <option value="LTHCHASSIS">
-  <option value="LTM">
-  <option value="MEDREPAIR">
-  <option value="MONDELEZ">
-  <option value="NEUKIRCH">
-  <option value="POCO">
-  <option value="PRAHL&BARSOE">
-  <option value="REMAIN">
-  <option value="S&O">
-  <option value="SCANGLOBAL">
-  <option value="TANKFELD">
-  <option value="TCO">
-  <option value="TWS">
-  <option value="UCS">
-  <option value="UNIKAI">
-  <option value="UNITAINER">
-  <option value="VETR">
- </datalist>
 
  <div class="f"><label>Größe</label>
   <div class="seg" id="sSize"><button data-v="20" class="on">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
@@ -142,27 +115,42 @@ const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Sam
 const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const V={size:"20",typ1:"DC",typ2:"DC",lv:"L"};
 
+const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTT","DCC","DSV","DUSS","EDEKA","EKOM","EUGS","FIEGE","FREUDENBERG","HCCR","HCS","HKL","KRAUSELAGER","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH","POCO","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TCO","TWS","UCS","UNIKAI","UNITAINER","VETR"];
+
 function locVal(id){return $(id).value.trim().toUpperCase()}
 
-/* Kutu boşken listeyi gizle, harf yazılınca göster (Tarayıcı hatasını önler) */
-function manageDatalist(id) {
- const el = $(id);
- el.addEventListener("input", function() {
-  this.classList.remove("err");
-  if (this.value.length > 0) {
-   this.setAttribute("list", "yerler");
-  } else {
-   this.removeAttribute("list");
+/* Yeni Özel Arama Sistemi Motoru */
+function setupAutocomplete(id) {
+ const inp = $(id);
+ const box = $(id+"-sugg");
+ 
+ inp.addEventListener("input", () => {
+  inp.classList.remove("err");
+  const val = inp.value.trim().toUpperCase();
+  if (!val) { box.style.display="none"; return; }
+  
+  const matches = LOCS.filter(l => l.includes(val));
+  if (!matches.length) { box.style.display="none"; return; }
+  
+  box.innerHTML = matches.map(m => `<div>${m}</div>`).join("");
+  box.style.display = "block";
+ });
+
+ box.addEventListener("click", e => {
+  if(e.target.tagName === "DIV"){
+   inp.value = e.target.textContent;
+   box.style.display = "none";
   }
  });
- el.addEventListener("focus", function() {
-  if (this.value.length === 0) {
-   this.removeAttribute("list");
+
+ document.addEventListener("click", e => {
+  if(e.target !== inp && e.target.parentNode !== box) {
+   box.style.display = "none";
   }
  });
 }
-manageDatalist("von");
-manageDatalist("nach");
+setupAutocomplete("von");
+setupAutocomplete("nach");
 
 let fnTouched=false;
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -213,7 +201,7 @@ $("save").addEventListener("click",()=>{
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
  ["von","nach","cn1","cn2","ch","an","bm"].forEach(id=>$(id).value="");
- $("von").removeAttribute("list"); $("nach").removeAttribute("list"); // Listeleri sıfırla
+ $("von-sugg").style.display="none"; $("nach-sugg").style.display="none";
  V.size="20";V.lv="L";setSeg("sSize","20");setSeg("sLV","L");onSize();
  fnTouched=false;autoFn();
  render();toast("Gespeichert");flush();
