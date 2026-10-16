@@ -41,9 +41,6 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 #toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--deep);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s}
 #toast.show{opacity:1}
 
-#note{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:16px;font-family:inherit;background:var(--bg);color:var(--text);resize:vertical}
-#note:focus{outline:none;border-color:var(--acc)}
-.btn2{margin-top:8px;padding:8px 12px;background:transparent;border:1.5px solid var(--line);border-radius:8px;color:var(--sub);font-size:13px;font-weight:600}
 .sugg {display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; max-height:200px; overflow-y:auto; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-top:4px;}
 .sugg div {padding:12px; border-bottom:1px solid var(--line); font-size:15px; color:var(--text); cursor:pointer;}
 .sugg div:last-child {border-bottom:0;}
@@ -104,12 +101,6 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 </div>
 
 <div class="card"><h2>Noch nicht gesendet</h2><div id="list"><div class="empty">Alles gesendet ✓</div></div></div>
-
-<div class="card"><h2>Notizen</h2>
- <textarea id="note" rows="5" placeholder="Eigene Notizen hier eintragen..."></textarea>
- <button class="btn" id="noteSend" style="margin-top:8px">Notiz senden</button>
- <button class="btn2" id="noteClear">Notizen löschen</button>
-</div>
 </main>
 <div id="toast"></div>
 
@@ -215,23 +206,6 @@ $("save").addEventListener("click",()=>{
  V.size="20";V.lv="L";setSeg("sSize","20");setSeg("sLV","L");onSize();
  fnTouched=false;autoFn();
  render();toast("Gespeichert");flush();
-});
-
-$("note").value=ls.get("fl_note","");
-$("note").addEventListener("input",()=>ls.set("fl_note",$("note").value));
-$("noteClear").addEventListener("click",()=>{if($("note").value&&!confirm("Notizen wirklich löschen?"))return;$("note").value="";ls.set("fl_note","")});
-
-$("noteSend").addEventListener("click",()=>{
- const txt=$("note").value.trim();
- const fz=$("fz").value.trim(),fa=$("fa").value.trim();
- if(!txt){toast("Bitte erst eine Notiz schreiben");return}
- if(!fa){toast("Bitte Fahrer eingeben");return}
- const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value||today(),tag:$("tg").value,
-  fahrzeug:fz,fahrer:fa,auftraggeber:"",fahrtnr:"",von:"NOTIZ",nach:"",groesse:"",container1:"",typ1:"",container2:"",typ2:"",
-  lv:"",chassis:"",auftragsnummer:"",bemerkung:txt,sent:false};
- ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
- $("note").value="";ls.set("fl_note","");
- toast("Notiz wird gesendet");flush();
 });
 
 let busy=false;
