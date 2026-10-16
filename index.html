@@ -66,12 +66,50 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
  </div>
  
  <div class="row">
-  <div class="f"><label>Von *</label><input list="list_von" id="von" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters"></div>
-  <div class="f"><label>Nach *</label><input list="list_nach" id="nach" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters"></div>
+  <div class="f"><label>Von *</label><input id="von" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters"></div>
+  <div class="f"><label>Nach *</label><input id="nach" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters"></div>
  </div>
- <!-- Listeler Başlangıçta Boş Tutuluyor -->
- <datalist id="list_von"></datalist>
- <datalist id="list_nach"></datalist>
+ 
+ <datalist id="yerler">
+  <option value="BETTENDUSCHER">
+  <option value="CCIS">
+  <option value="CMR">
+  <option value="CST">
+  <option value="CTA">
+  <option value="CTB">
+  <option value="CTT">
+  <option value="DCC">
+  <option value="DSV">
+  <option value="DUSS">
+  <option value="EDEKA">
+  <option value="EKOM">
+  <option value="EUGS">
+  <option value="FIEGE">
+  <option value="FREUDENBERG">
+  <option value="HCCR">
+  <option value="HCS">
+  <option value="HKL">
+  <option value="KRAUSELAGER">
+  <option value="KTH">
+  <option value="LAGERHAUS">
+  <option value="LTHCHASSIS">
+  <option value="LTM">
+  <option value="MEDREPAIR">
+  <option value="MONDELEZ">
+  <option value="NEUKIRCH">
+  <option value="POCO">
+  <option value="PRAHL&BARSOE">
+  <option value="REMAIN">
+  <option value="S&O">
+  <option value="SCANGLOBAL">
+  <option value="TANKFELD">
+  <option value="TCO">
+  <option value="TWS">
+  <option value="UCS">
+  <option value="UNIKAI">
+  <option value="UNITAINER">
+  <option value="VETR">
+ </datalist>
 
  <div class="f"><label>Größe</label>
   <div class="seg" id="sSize"><button data-v="20" class="on">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
@@ -104,25 +142,27 @@ const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Sam
 const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const V={size:"20",typ1:"DC",typ2:"DC",lv:"L"};
 
-/* Tüm Yerlerin Listesi */
-const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTT","DCC","DSV","DUSS","EDEKA","EKOM","EUGS","FIEGE","FREUDENBERG","HCCR","HCS","HKL","KRAUSELAGER","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH","POCO","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TCO","TWS","UCS","UNIKAI","UNITAINER","VETR"];
-
-/* Harf Yazıldıkça Listeyi Dolduran Fonksiyon */
-function updateList(id){
- const val=$(id).value.trim().toUpperCase();
- const dl=$("list_"+id);
- dl.innerHTML=""; // Önce listeyi temizle
- if(val.length>0){ // Eğer harf girildiyse uyanları ekle
-  LOCS.forEach(l=>{
-   if(l.includes(val)) dl.innerHTML+=`<option value="${l}">`;
-  });
- }
-}
-
 function locVal(id){return $(id).value.trim().toUpperCase()}
 
-$("von").addEventListener("input",function(){this.classList.remove("err");updateList("von")});
-$("nach").addEventListener("input",function(){this.classList.remove("err");updateList("nach")});
+/* Kutu boşken listeyi gizle, harf yazılınca göster (Tarayıcı hatasını önler) */
+function manageDatalist(id) {
+ const el = $(id);
+ el.addEventListener("input", function() {
+  this.classList.remove("err");
+  if (this.value.length > 0) {
+   this.setAttribute("list", "yerler");
+  } else {
+   this.removeAttribute("list");
+  }
+ });
+ el.addEventListener("focus", function() {
+  if (this.value.length === 0) {
+   this.removeAttribute("list");
+  }
+ });
+}
+manageDatalist("von");
+manageDatalist("nach");
 
 let fnTouched=false;
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -173,7 +213,7 @@ $("save").addEventListener("click",()=>{
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
  ["von","nach","cn1","cn2","ch","an","bm"].forEach(id=>$(id).value="");
- $("list_von").innerHTML=""; $("list_nach").innerHTML=""; // Listeleri sıfırla
+ $("von").removeAttribute("list"); $("nach").removeAttribute("list"); // Listeleri sıfırla
  V.size="20";V.lv="L";setSeg("sSize","20");setSeg("sLV","L");onSize();
  fnTouched=false;autoFn();
  render();toast("Gespeichert");flush();
