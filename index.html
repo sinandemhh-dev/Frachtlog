@@ -41,7 +41,6 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 #toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--deep);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s}
 #toast.show{opacity:1}
 
-/* Yeni Kusursuz Arama Menüsü Tasarımı */
 .sugg {display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; max-height:200px; overflow-y:auto; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-top:4px;}
 .sugg div {padding:12px; border-bottom:1px solid var(--line); font-size:15px; color:var(--text); cursor:pointer;}
 .sugg div:last-child {border-bottom:0;}
@@ -74,12 +73,12 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
  <div class="row">
   <div class="f">
    <label>Von *</label>
-   <input id="von" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters">
+   <input id="von" autocomplete="off" placeholder="Tippen (z.B. E)..." autocapitalize="characters">
    <div id="von-sugg" class="sugg"></div>
   </div>
   <div class="f">
    <label>Nach *</label>
-   <input id="nach" autocomplete="off" placeholder="Tippen (z.B. C)..." autocapitalize="characters">
+   <input id="nach" autocomplete="off" placeholder="Tippen (z.B. E)..." autocapitalize="characters">
    <div id="nach-sugg" class="sugg"></div>
   </div>
  </div>
@@ -119,7 +118,7 @@ const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTT","DCC","DSV","DU
 
 function locVal(id){return $(id).value.trim().toUpperCase()}
 
-/* Yeni Özel Arama Sistemi Motoru */
+/* Vorschlaege: nur Orte, die mit den getippten Buchstaben ANFANGEN */
 function setupAutocomplete(id) {
  const inp = $(id);
  const box = $(id+"-sugg");
@@ -129,7 +128,7 @@ function setupAutocomplete(id) {
   const val = inp.value.trim().toUpperCase();
   if (!val) { box.style.display="none"; return; }
   
-  const matches = LOCS.filter(l => l.includes(val));
+  const matches = LOCS.filter(l => l.startsWith(val));
   if (!matches.length) { box.style.display="none"; return; }
   
   box.innerHTML = matches.map(m => `<div>${m}</div>`).join("");
@@ -193,7 +192,7 @@ $("save").addEventListener("click",()=>{
  }
  ["fz","fa","ag"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
  const two=V.size==="2x20";
- const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value\vert{}\vert{}today(),tag:$("tg").value,
+ const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value||today(),tag:$("tg").value,
   fahrzeug:fz,fahrer:fa,auftraggeber:$("ag").value.trim(),fahrtnr:$("fn").value.trim(),von:von,nach:nach,
   groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),typ1:V.typ1,
   container2:two?$("cn2").value.trim().toUpperCase():"",typ2:two?V.typ2:"",
@@ -233,7 +232,6 @@ function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline
 window.addEventListener("online",()=>{net();flush()});window.addEventListener("offline",net);
 net();render();flush();setInterval(flush,30000);
 
-/* İNATÇI HAFIZAYI ZORLA TEMİZLEYEN KOD BURADA */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(function(registrations) {
     for (let registration of registrations) {
