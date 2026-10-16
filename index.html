@@ -100,7 +100,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
  <button class="btn" id="save">Eintrag speichern</button>
 </div>
 
-<div class="card"><h2>Meine Einträge heute</h2><div id="list"><div class="empty">Noch keine Einträge</div></div></div>
+<div class="card"><h2>Noch nicht gesendet</h2><div id="list"><div class="empty">Alles gesendet ✓</div></div></div>
 </main>
 <div id="toast"></div>
 
@@ -222,11 +222,11 @@ async function flush(){
  ls.set("fl_q",rest);busy=false;render();
 }
 function render(){
- const h=ls.get("fl_h",[]).filter(e=>e.datum===today());
+ const h=ls.get("fl_h",[]).filter(e=>e.datum===today()&&!e.sent);
  $("list").innerHTML=h.length?h.map(e=>{
   const c=e.groesse==="2x20"?`${esc(e.container1)||"—"} ${esc(e.typ1)} + ${esc(e.container2)||"—"} ${esc(e.typ2)}`:`${esc(e.container1)||"—"} ${esc(e.typ1)}`;
   return `<div class="e"><div class="t"><span>${e.fahrtnr?"#"+esc(e.fahrtnr)+" ":""}${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
-  <div class="m">${c} · ${esc(e.groesse)} · ${esc(e.lv)}${e.auftragsnummer?" · "+esc(e.auftragsnummer):""}</div></div>`}).join(""):'<div class="empty">Noch keine Einträge</div>';
+  <div class="m">${c} · ${esc(e.groesse)} · ${esc(e.lv)}${e.auftragsnummer?" · "+esc(e.auftragsnummer):""}</div></div>`}).join(""):'<div class="empty">Alles gesendet ✓</div>';
 }
 function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
 window.addEventListener("online",()=>{net();flush()});window.addEventListener("offline",net);
