@@ -232,7 +232,15 @@ function render(){
 function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
 window.addEventListener("online",()=>{net();flush()});window.addEventListener("offline",net);
 net();render();flush();setInterval(flush,30000);
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+/* İNATÇI HAFIZAYI ZORLA TEMİZLEYEN KOD BURADA */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for (let registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
 </script>
 </body>
 </html>
