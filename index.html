@@ -114,7 +114,7 @@ const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Sam
 const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const V={size:"20",typ1:"DC",typ2:"DC",lv:"L"};
 
-const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTT","DCC","DSV","DUSS","EDEKA","EKOM","EUGS","FIEGE","FREUDENBERG","HCCR","HCS","HKL","KRAUSELAGER","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH","POCO","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TCO","TWS","UCS","UNIKAI","UNITAINER","VETR"];
+const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DSV TCO","DUSS","EDEKA","EKOM","EUGS","FIEGE HCCR","FREUDENBERG HCCR","HCCR","HCS","HKL UCS","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TWS","UCS","UNIKAI","UNITAINER","VETR PRAHL&BARSOE"];
 
 function locVal(id){return $(id).value.trim().toUpperCase()}
 
