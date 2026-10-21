@@ -1,45 +1,204 @@
-// ohmlog Backend (Google Apps Script) - schreibt Einträge in die Tabelle (erstes Blatt)
+// ohmlog: App-Felder und Sheet1 verwenden dieselben Spalten.
 const SECRET = "frachtlog-n7q4x2"; // muss identisch mit SECRET in index.html sein
-const HEAD = ["Zeitstempel","Datum","Tag","Fahrzeug","Fahrer","Auftraggeber","Fahrt-Nr","Von","Nach","Größe","Container 1","Typ 1","Container 2","Typ 2","L/V","Chassis","Auftragsnummer","Bemerkungen / Wartezeiten","ID","Chassis A-Nummer"];
-const ID_COL = 19;             // Spalte S = ID
-const DATA_COLS = HEAD.length; // A bis T
+const SCHEMA = "ohmlog-app-fields-v2";
+const FIELDS = [
+  ["Fahrzeug Kennzeichen", "fahrzeug"], ["Fahrer", "fahrer"],
+  ["Datum", "datum"], ["Tag", "tag"], ["Auftraggeber", "auftraggeber"],
+  ["Fahrtnummer", "fahrtnr"], ["Auftragsnummer", "auftragsnummer"],
+  ["Von", "von"], ["Nach", "nach"], ["Größe", "groesse"],
+  ["Containernummer 1", "container1"], ["Containernummer 2", "container2"],
+  ["L / V", "lv"], ["Chassis Kennzeichen", "chassis"],
+  ["Chassis A-Nummer", "chassisANummer"], ["Probleme", "bemerkung"],
+  ["Zeitstempel", null], ["ID", "id"]
+];
+const HEAD = FIELDS.map(field => field[0]);
+const ID_COL = 18, A_NUMBER_COL = 15, DATA_COLS = HEAD.length;
+const OLD_COLUMNS = { A:"Q", B:"C", C:"D", D:"A", E:"B", F:"E", G:"F", H:"H", I:"I", J:"J", K:"K", L:null, M:"L", N:null, O:"M", P:"N", Q:"G", R:"P", S:"R", T:"O" };
+const ALIASES = { "Fahrzeug Kennzeichen":"Fahrzeug", "Fahrtnummer":"Fahrt-Nr", "Containernummer 1":"Container 1", "Containernummer 2":"Container 2", "L / V":"L/V", "Chassis Kennzeichen":"Chassis", "Probleme":"Bemerkungen / Wartezeiten" };
 
-// Letzte Zeile mit Daten: nur Spalte A zählt
-function lastDataRow(sh) {
-  const a = sh.getRange("A1:A" + sh.getMaxRows()).getValues();
-  let n = a.length;
-  while (n > 0 && a[n - 1][0] === "") n--;
-  return n;
+function dataSheet() {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+  if (!sh) throw new Error("Tabellenblatt 'Sheet1' fehlt.");
+  return sh;
+}
+
+function rewriteFormula(formula, sheetName, column, remap) {
+  if (!formula) return formula;
+  let result = formula;
+  if (remap) {
+    result = result.replace(/((?:'Sheet1'|Sheet1)!)(\$?)([A-Z]{1,3})(\$?\d+)?(?::(\$?)([A-Z]{1,3})(\$?\d+)?)?/g,
+      (match, prefix, dollar, start, row, endDollar, end, endRow) => {
+        if (!(start in OLD_COLUMNS) || (end && !(end in OLD_COLUMNS))) throw new Error("Unbekannter Sheet1-Bezug: " + match);
+        if (OLD_COLUMNS[start] === null || (end && OLD_COLUMNS[end] === null)) throw new Error("Eine Formel verwendet noch Typ 1 / Typ 2: " + match);
+        return prefix + dollar + OLD_COLUMNS[start] + (row || "") + (end ? ":" + endDollar + OLD_COLUMNS[end] + (endRow || "") : "");
+      });
+  }
+  if (sheetName === "Driver Totals") {
+    if (column === 37 || column === 43) {
+      result = result.replace(/OR\(\$AF(\d+)=20,\$AF\1=40\)/g, (_, row) => {
+        const cell = "$AF" + row;
+        return `OR(${cell}=20,${cell}=40,${cell}=45,${cell}="2x20")`;
+      });
+    }
+    if (column === 37) {
+      result = result.replace(/IF\(\$AF(\d+)=20,4,5\)/g, (_, row) => {
+        const cell = "$AF" + row;
+        return `IF(IF(${cell}=45,'Evaluation'!$B$20,IF(${cell}="2x20",20,${cell}))=20,4,5)`;
+      });
+    }
+    if (column === 38) {
+      result = result.replace(/IF\(ISNUMBER\(\$AK(\d+)\),\$AK\1,IFERROR\(/g, (_, row) => {
+        const factor = `IF($AF${row}="2x20",'Evaluation'!$B$21,1)`;
+        return `IF(ISNUMBER($AK${row}),$AK${row}*${factor},IFERROR(${factor}*`;
+      });
+    }
+  }
+  return result;
+}
+
+function prepareFormulaChanges(ss, remap) {
+  const patches = [];
+  ss.getSheets().forEach(sheet => {
+    if (sheet.getName() === "Sheet1" || sheet.getName().indexOf("Sheet1_Backup_") === 0) return;
+    const formulas = sheet.getDataRange().getFormulas();
+    const groups = {};
+    for (let r = 0; r < formulas.length; r++) {
+      let start = -1, before = [], after = [];
+      function finish() {
+        if (start < 0) return;
+        const key = start + ":" + after.length;
+        (groups[key] || (groups[key] = [])).push({ row:r + 1, column:start + 1, before:before, after:after });
+        start = -1; before = []; after = [];
+      }
+      for (let c = 0; c < formulas[r].length; c++) {
+        const oldFormula = formulas[r][c];
+        const newFormula = rewriteFormula(oldFormula, sheet.getName(), c + 1, remap);
+        if (oldFormula && newFormula !== oldFormula) {
+          if (start < 0) start = c;
+          before.push(oldFormula); after.push(newFormula);
+        } else finish();
+      }
+      finish();
+    }
+    Object.keys(groups).forEach(key => {
+      let patch = null;
+      groups[key].forEach(segment => {
+        if (!patch || segment.row !== patch.row + patch.after.length) {
+          patch = { sheet:sheet, row:segment.row, column:segment.column, before:[], after:[] };
+          patches.push(patch);
+        }
+        patch.before.push(segment.before); patch.after.push(segment.after);
+      });
+    });
+  });
+  return patches;
+}
+
+function applyFormulaChanges(patches, restore) {
+  patches.forEach(patch => {
+    const values = restore ? patch.before : patch.after;
+    patch.sheet.getRange(patch.row, patch.column, values.length, values[0].length).setFormulas(values);
+  });
+}
+
+function formatDataSheet(sh) {
+  sh.getRange(1, 1, 1, DATA_COLS).setFontWeight("bold").setWrap(true);
+  sh.setFrozenRows(1);
+  sh.getRange(2, 3, Math.max(sh.getMaxRows() - 1, 1), 1).setNumberFormat("dd.MM.yyyy");
+  sh.getRange(2, 17, Math.max(sh.getMaxRows() - 1, 1), 1).setNumberFormat("dd.MM.yyyy HH:mm:ss");
+  sh.hideColumns(17, 2);
+}
+
+function ensureColumns(sh) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const range = sh.getDataRange();
+  const oldValues = range.getValues();
+  const oldHeaders = (oldValues[0] || []).map(value => String(value));
+  if (HEAD.every((name, i) => oldHeaders[i] === name)) return false;
+  const known = HEAD.concat(Object.keys(ALIASES).map(key => ALIASES[key]), ["Typ 1", "Typ 2"]);
+  oldHeaders.forEach(name => { if (name && known.indexOf(name) < 0) throw new Error("Unbekannte Spalte: " + name); });
+  const legacy = oldHeaders.some(name => ["Fahrzeug", "Fahrt-Nr", "Container 1", "Typ 1", "L/V"].indexOf(name) >= 0);
+  const patches = prepareFormulaChanges(ss, legacy);
+  const rows = [HEAD.slice()];
+  for (let r = 1; r < oldValues.length; r++) {
+    rows.push(HEAD.map(name => {
+      let index = oldHeaders.indexOf(name);
+      if (index < 0 && ALIASES[name]) index = oldHeaders.indexOf(ALIASES[name]);
+      return index < 0 ? "" : oldValues[r][index];
+    }));
+  }
+  if (oldHeaders.some(Boolean)) sh.copyTo(ss).setName("Sheet1_Backup_" + Date.now()).hideSheet();
+  const width = Math.max(DATA_COLS, oldHeaders.length);
+  if (sh.getMaxColumns() < width) sh.insertColumnsAfter(sh.getMaxColumns(), width - sh.getMaxColumns());
+  try {
+    sh.getRange(1, 1, Math.max(oldValues.length, 1), width).clearContent();
+    sh.getRange(1, 1, rows.length, DATA_COLS).setValues(rows);
+    applyFormulaChanges(patches, false);
+    formatDataSheet(sh);
+  } catch (error) {
+    sh.getRange(1, 1, Math.max(oldValues.length, 1), width).clearContent();
+    if (oldValues.length && oldHeaders.length) sh.getRange(1, 1, oldValues.length, oldHeaders.length).setValues(oldValues);
+    applyFormulaChanges(patches, true);
+    throw error;
+  }
+  return true;
+}
+
+// Einmal im Editor ausführen; vorhandene Daten und Berichtformeln werden angepasst.
+function setup() {
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const sh = dataSheet();
+    const migrated = ensureColumns(sh);
+    if (!migrated) applyFormulaChanges(prepareFormulaChanges(SpreadsheetApp.getActiveSpreadsheet(), false), false);
+    formatDataSheet(sh); SpreadsheetApp.flush();
+    return "Sheet1 entspricht jetzt den Eingabefeldern der App.";
+  } finally { lock.releaseLock(); }
+}
+
+function storedValue(data, key) {
+  const value = data[key];
+  if (value === undefined || value === null) return "";
+  if (key === "groesse" && ["20", "40", "45"].indexOf(String(value)) >= 0) return Number(value);
+  return typeof value === "string" && value.charAt(0) === "=" ? "'" + value : value;
+}
+
+// Verbindungsprüfung ohne Tabellenzugriff oder Schreibvorgang.
+function doGet() {
+  return out({ status:"ready", schema:SCHEMA });
 }
 
 function doPost(e) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     const d = JSON.parse(e.postData.contents);
-    if (d.secret !== SECRET) return out({ error: "unauthorized" });
-    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-    let last = lastDataRow(sh);
-    if (last === 0) {
-      sh.getRange(1, 1, 1, DATA_COLS).setValues([HEAD]).setFontWeight("bold");
-      sh.setFrozenRows(1);
-      last = 1;
-    } else if (sh.getRange(1, DATA_COLS).getValue() === "") {
-      // vorhandene Tabelle: Überschrift der neuen Spalte T einmalig ergänzen
-      sh.getRange(1, DATA_COLS).setValue(HEAD[DATA_COLS - 1]).setFontWeight("bold");
-    }
+    if (d.secret !== SECRET) return out({ error:"unauthorized" });
+    if (typeof d.id !== "string" || !d.id.trim()) return out({ error:"ID fehlt" });
+    const sh = dataSheet(); ensureColumns(sh);
+    const last = Math.max(sh.getLastRow(), 1);
     if (last > 1) {
       const ids = sh.getRange(2, ID_COL, last - 1, 1).getValues().flat();
-      if (ids.indexOf(d.id) !== -1) return out({ status: "dup" });
+      const existing = ids.indexOf(d.id);
+      if (existing >= 0) {
+        const row = existing + 2;
+        const cells = sh.getRange(row, 1, 1, DATA_COLS).getValues()[0];
+        let changed = false;
+        FIELDS.forEach((field, i) => {
+          if (field[1] && cells[i] === "" && d[field[1]] !== undefined) {
+            const value = storedValue(d, field[1]);
+            if (value !== "") { cells[i] = value; changed = true; }
+          }
+        });
+        if (changed) { sh.getRange(row, 1, 1, DATA_COLS).setValues([cells]); SpreadsheetApp.flush(); }
+        return out({ status:"dup", schema:SCHEMA });
+      }
     }
     if (last + 1 > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 100);
-    sh.getRange(last + 1, 1, 1, DATA_COLS).setValues([[new Date(), d.datum, d.tag, d.fahrzeug, d.fahrer, d.auftraggeber, d.fahrtnr, d.von, d.nach,
-      d.groesse, d.container1, d.typ1, d.container2, d.typ2, d.lv, d.chassis, d.auftragsnummer, d.bemerkung, d.id, d.chassisANummer || ""]]);
-    return out({ status: "ok" });
-  } catch (err) {
-    return out({ error: String(err) });
-  } finally {
-    lock.releaseLock();
-  }
+    const values = FIELDS.map(field => field[1] ? storedValue(d, field[1]) : new Date());
+    sh.getRange(last + 1, 1, 1, DATA_COLS).setValues([values]); SpreadsheetApp.flush();
+    return out({ status:"ok", schema:SCHEMA });
+  } catch (error) { return out({ error:String(error) }); }
+  finally { lock.releaseLock(); }
 }
-function out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
+function out(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
