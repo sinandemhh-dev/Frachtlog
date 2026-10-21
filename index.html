@@ -43,9 +43,12 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 #toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;max-width:90%;text-align:center}
 #toast.show{opacity:1}
 .sugg{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;max-height:220px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.2);margin-top:4px}
-.sugg div{padding:12px;border-bottom:1px solid var(--line);font-size:15px}
-.sugg div:last-child{border-bottom:0}
-.sugg div:active{background:#eee}
+.sugg button{display:block;width:100%;padding:12px;border:0;border-bottom:1px solid var(--line);background:#fff;color:var(--text);font:inherit;font-size:15px;text-align:left;cursor:pointer}
+.sugg button:last-child{border-bottom:0}
+.sugg button:active{background:#eee}
+.sugg .manual{background:#f2f2f2;font-weight:700}
+.sugg small{display:block;margin-top:3px;font-size:12px;font-weight:400;color:var(--sub)}
+.hint{margin:5px 0 0;font-size:11.5px;line-height:1.35;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -69,8 +72,8 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
  <div class="f"><label>Fahrtnummer *</label><input id="fn" value="1" readonly autocomplete="off"></div>
  <div class="f"><label>Auftragsnummer *</label><input id="an" placeholder="20-95625.002-1.1" autocomplete="off"></div>
  <div class="row">
-  <div class="f"><label>Von *</label><input id="von" autocomplete="off" placeholder="CTA / CTB …" autocapitalize="characters"><div id="von-sugg" class="sugg"></div></div>
-  <div class="f"><label>Nach *</label><input id="nach" autocomplete="off" placeholder="PRAHL&amp;BARSOE / EDEKA …" autocapitalize="characters"><div id="nach-sugg" class="sugg"></div></div>
+  <div class="f"><label for="von">Von *</label><input id="von" autocomplete="off" placeholder="CTA / eigener Ort …" autocapitalize="characters" aria-describedby="von-hint"><div id="von-sugg" class="sugg"></div><p id="von-hint" class="hint">Nicht in der Liste? Namen direkt eingeben.</p></div>
+  <div class="f"><label for="nach">Nach *</label><input id="nach" autocomplete="off" placeholder="EDEKA / eigener Ort …" autocapitalize="characters" aria-describedby="nach-hint"><div id="nach-sugg" class="sugg"></div><p id="nach-hint" class="hint">Nicht in der Liste? Namen direkt eingeben.</p></div>
  </div>
  <div class="f"><label>Größe *</label>
   <div class="seg" id="sSize"><button data-v="20">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
@@ -119,17 +122,36 @@ function onSize(){
 }
 
 /* Vorschläge ab dem ersten Buchstaben; freie Eingabe bleibt möglich. */
+function locationNames(){
+ const custom=ls.get("fl_custom_locs",[]);
+ return [...new Set(LOCS.concat(Array.isArray(custom)?custom.filter(x=>typeof x==="string"&&x.trim()):[]))];
+}
+function rememberLocations(...names){
+ const all=locationNames();
+ names.forEach(name=>{const value=name.trim().toUpperCase();if(value&&!all.includes(value))all.push(value)});
+ ls.set("fl_custom_locs",all.filter(name=>!LOCS.includes(name)));
+}
 function setupAC(id){
  const inp=$(id),box=$(id+"-sugg");
- inp.addEventListener("input",()=>{
+ function suggest(){
   const v=inp.value.trim().toUpperCase();
   if(v.length<1){box.style.display="none";return}
-  const m=LOCS.filter(l=>l.startsWith(v)).concat(LOCS.filter(l=>!l.startsWith(v)&&l.includes(v))).slice(0,6);
-  if(!m.length){box.style.display="none";return}
-  box.innerHTML=m.map(x=>`<div>${esc(x)}</div>`).join("");
+  const names=locationNames();
+  const m=names.filter(l=>l.startsWith(v)).concat(names.filter(l=>!l.startsWith(v)&&l.includes(v))).slice(0,6);
+  box.innerHTML=m.map(x=>`<button type="button" data-location="${esc(x)}">${esc(x)}</button>`).join("");
+  if(!names.includes(v))box.innerHTML+=`<button type="button" class="manual" data-location="${esc(v)}">„${esc(v)}“ verwenden<small>Eigene Eingabe — nicht in der Liste</small></button>`;
   box.style.display="block";
+ }
+ inp.addEventListener("input",suggest);
+ inp.addEventListener("focus",suggest);
+ inp.addEventListener("keydown",e=>{
+  if(e.key==="Escape"||e.key==="Enter")box.style.display="none";
  });
- box.addEventListener("click",e=>{if(e.target.tagName==="DIV"){inp.value=e.target.textContent;inp.classList.remove("err");box.style.display="none"}});
+ box.addEventListener("click",e=>{
+  const option=e.target.closest("button[data-location]");
+  if(!option||!box.contains(option))return;
+  inp.value=option.dataset.location;inp.classList.remove("err");inp.setCustomValidity("");box.style.display="none";
+ });
  document.addEventListener("click",e=>{if(e.target!==inp&&!box.contains(e.target))box.style.display="none"});
 }
 setupAC("von");setupAC("nach");
@@ -201,6 +223,7 @@ $("save").addEventListener("click",()=>{
   container2:two?$("cn2").value.trim().toUpperCase():"",typ2:"",
   lv:V.lv,chassis:ch,chassisANummer:ca,
   auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false};
+ rememberLocations(e.von,e.nach);
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
  ls.set("fl_next_fahrtnummer",Number(e.fahrtnr)+1);
