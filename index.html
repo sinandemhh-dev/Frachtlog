@@ -66,8 +66,8 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 </div>
 
 <div class="card"><h2>Fahrstrecke &amp; Container</h2>
- <div class="f"><label>Fahrtnummer *</label><input id="fn" placeholder="20-95625.002-1.1" autocomplete="off"></div>
- <div class="f"><label>Auftragsnummer *</label><input id="an" autocomplete="off"></div>
+ <div class="f"><label>Fahrtnummer *</label><input id="fn" value="1" readonly autocomplete="off"></div>
+ <div class="f"><label>Auftragsnummer *</label><input id="an" placeholder="20-95625.002-1.1" autocomplete="off"></div>
  <div class="row">
   <div class="f"><label>Von *</label><input id="von" autocomplete="off" placeholder="CTA / CTB …" autocapitalize="characters"><div id="von-sugg" class="sugg"></div></div>
   <div class="f"><label>Nach *</label><input id="nach" autocomplete="off" placeholder="PRAHL&amp;BARSOE / EDEKA …" autocapitalize="characters"><div id="nach-sugg" class="sugg"></div></div>
@@ -99,6 +99,11 @@ const $=id=>document.getElementById(id);
 const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const V={size:"",lv:""};
+function nextFahrtnummer(){
+ const n=Number(ls.get("fl_next_fahrtnummer",1));
+ return Number.isSafeInteger(n)&&n>0?n:1;
+}
+$("fn").value=String(nextFahrtnummer());
 const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DSV TCO","DUSS","EDEKA","EKOM","EUGS","FIEGE HCCR","FREUDENBERG HCCR","HCCR","HCS","HKL UCS","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TWS","UCS","UNIKAI","UNITAINER","VETI"];
 
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -155,6 +160,7 @@ $("save").addEventListener("click",()=>{
  const fz=$("fz").value.trim(),fa=$("fa").value.trim();
  ["fz","fa"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
  const ch=$("ch").value.trim(),ca=$("ca").value.trim();
+ $("fn").value=String(nextFahrtnummer());
  const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value,tag:$("tg").value,
   fahrzeug:fz,fahrer:fa,auftraggeber:"LTH",fahrtnr:$("fn").value.trim(),
   von:$("von").value.trim().toUpperCase(),nach:$("nach").value.trim().toUpperCase(),
@@ -164,7 +170,9 @@ $("save").addEventListener("click",()=>{
   auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false};
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
- ["fn","an","von","nach","cn1","cn2","ch","ca","bm"].forEach(id=>$(id).value="");
+ ls.set("fl_next_fahrtnummer",Number(e.fahrtnr)+1);
+ $("fn").value=String(nextFahrtnummer());
+ ["an","von","nach","cn1","cn2","ch","ca","bm"].forEach(id=>$(id).value="");
  $("von-sugg").style.display="none";$("nach-sugg").style.display="none";
  V.size="";V.lv="";setSeg("sSize","");setSeg("sLV","");onSize();
  dtTouched=false;$("dt").value=today();setTag();
