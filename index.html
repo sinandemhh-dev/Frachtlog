@@ -46,9 +46,6 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 .sugg button{display:block;width:100%;padding:12px;border:0;border-bottom:1px solid var(--line);background:#fff;color:var(--text);font:inherit;font-size:15px;text-align:left;cursor:pointer}
 .sugg button:last-child{border-bottom:0}
 .sugg button:active{background:#eee}
-.sugg .manual{background:#f2f2f2;font-weight:700}
-.sugg small{display:block;margin-top:3px;font-size:12px;font-weight:400;color:var(--sub)}
-.hint{margin:5px 0 0;font-size:11.5px;line-height:1.35;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -72,8 +69,8 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
  <div class="f"><label>Fahrtnummer *</label><input id="fn" value="1" readonly autocomplete="off"></div>
  <div class="f"><label>Auftragsnummer *</label><input id="an" placeholder="20-95625.002-1.1" autocomplete="off"></div>
  <div class="row">
-  <div class="f"><label for="von">Von *</label><input id="von" autocomplete="off" placeholder="CTA / eigener Ort …" autocapitalize="characters" aria-describedby="von-hint"><div id="von-sugg" class="sugg"></div><p id="von-hint" class="hint">Nicht in der Liste? Namen direkt eingeben.</p></div>
-  <div class="f"><label for="nach">Nach *</label><input id="nach" autocomplete="off" placeholder="EDEKA / eigener Ort …" autocapitalize="characters" aria-describedby="nach-hint"><div id="nach-sugg" class="sugg"></div><p id="nach-hint" class="hint">Nicht in der Liste? Namen direkt eingeben.</p></div>
+  <div class="f"><label for="von">Von *</label><input id="von" autocomplete="off" placeholder="CTA / CTB …" autocapitalize="characters"><div id="von-sugg" class="sugg"></div></div>
+  <div class="f"><label for="nach">Nach *</label><input id="nach" autocomplete="off" placeholder="PRAHL&amp;BARSOE / EDEKA …" autocapitalize="characters"><div id="nach-sugg" class="sugg"></div></div>
  </div>
  <div class="f"><label>Größe *</label>
   <div class="seg" id="sSize"><button data-v="20">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
@@ -102,6 +99,7 @@ const $=id=>document.getElementById(id);
 const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const V={size:"",lv:""};
+const SYNC_SCHEMA="ohmlog-app-fields-v2";
 function nextFahrtnummer(){
  const n=Number(ls.get("fl_next_fahrtnummer",1));
  return Number.isSafeInteger(n)&&n>0?n:1;
@@ -121,26 +119,16 @@ function onSize(){
  $("l1").textContent=two?"Containernummer 1 *":"Containernummer *";
 }
 
-/* Vorschläge ab dem ersten Buchstaben; freie Eingabe bleibt möglich. */
-function locationNames(){
- const custom=ls.get("fl_custom_locs",[]);
- return [...new Set(LOCS.concat(Array.isArray(custom)?custom.filter(x=>typeof x==="string"&&x.trim()):[]))];
-}
-function rememberLocations(...names){
- const all=locationNames();
- names.forEach(name=>{const value=name.trim().toUpperCase();if(value&&!all.includes(value))all.push(value)});
- ls.set("fl_custom_locs",all.filter(name=>!LOCS.includes(name)));
-}
+/* Vorschläge ab dem ersten Buchstaben; nur Einträge aus der Liste. */
 function setupAC(id){
  const inp=$(id),box=$(id+"-sugg");
  function suggest(){
   const v=inp.value.trim().toUpperCase();
   if(v.length<1){box.style.display="none";return}
-  const names=locationNames();
+  const names=LOCS;
   const m=names.filter(l=>l.startsWith(v)).concat(names.filter(l=>!l.startsWith(v)&&l.includes(v))).slice(0,6);
   box.innerHTML=m.map(x=>`<button type="button" data-location="${esc(x)}">${esc(x)}</button>`).join("");
-  if(!names.includes(v))box.innerHTML+=`<button type="button" class="manual" data-location="${esc(v)}">„${esc(v)}“ verwenden<small>Eigene Eingabe — nicht in der Liste</small></button>`;
-  box.style.display="block";
+  box.style.display=m.length?"block":"none";
  }
  inp.addEventListener("input",suggest);
  inp.addEventListener("focus",suggest);
@@ -186,8 +174,9 @@ function validateFormats(){
  const parsed=new Date(date+"T12:00:00");
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(parsed.getTime())||parsed.getFullYear()!==Number(date.slice(0,4))||parsed.getMonth()+1!==Number(date.slice(5,7))||parsed.getDate()!==Number(date.slice(8,10)))return formatError("dt","Bitte ein gültiges Datum eingeben");
  for(const id of ["von","nach"]){
-  const value=$(id).value.trim();
-  if(value.length>120||!/[\p{L}]/u.test(value)||/[<>\x00-\x1f]/.test(value))return formatError(id,"Ort: Bitte einen gültigen Orts- oder Firmennamen eingeben");
+  const value=$(id).value.trim().toUpperCase();
+  if(!LOCS.includes(value))return formatError(id,"Bitte einen Ort aus der Vorschlagsliste auswählen");
+  $(id).value=value;
  }
  for(const id of (V.size==="2x20"?["cn1","cn2"]:["cn1"])){
   const value=$(id).value.trim().toUpperCase();
@@ -219,11 +208,10 @@ $("save").addEventListener("click",()=>{
  const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value,tag:$("tg").value,
   fahrzeug:fz,fahrer:fa,auftraggeber:"LTH",fahrtnr:$("fn").value.trim(),
   von:$("von").value.trim().toUpperCase(),nach:$("nach").value.trim().toUpperCase(),
-  groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),typ1:"",
-  container2:two?$("cn2").value.trim().toUpperCase():"",typ2:"",
+  groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),
+  container2:two?$("cn2").value.trim().toUpperCase():"",
   lv:V.lv,chassis:ch,chassisANummer:ca,
   auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false};
- rememberLocations(e.von,e.nach);
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
  ls.set("fl_next_fahrtnummer",Number(e.fahrtnr)+1);
@@ -244,7 +232,8 @@ async function flush(){
   try{
    const r=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({},e,{secret:SECRET}))});
    const j=await r.json();
-   if(j.status==="ok"||j.status==="dup"){const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h)}
+   if((j.status==="ok"||j.status==="dup")&&j.schema===SYNC_SCHEMA){const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h)}
+   else if(j.status==="ok"||j.status==="dup"){rest.push(e);toast("Übertragung bitte aktualisieren. Eintrag bleibt auf diesem Gerät gespeichert.")}
    else rest.push(e);
   }catch(x){rest.push(e)}
  }
@@ -259,6 +248,14 @@ function render(){
 }
 function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
 window.addEventListener("online",()=>{net();flush()});window.addEventListener("offline",net);
+function queueSchemaBackfill(){
+ if(ls.get("fl_sync_schema","")===SYNC_SCHEMA)return;
+ const history=ls.get("fl_h",[]),queue=ls.get("fl_q",[]);
+ const ids=new Set(queue.map(e=>e.id));
+ history.forEach(e=>{if(!e.id)return;e.sent=false;if(!ids.has(e.id)){queue.push(Object.assign({},e));ids.add(e.id)}});
+ ls.set("fl_h",history);ls.set("fl_q",queue);ls.set("fl_sync_schema",SYNC_SCHEMA);
+}
+queueSchemaBackfill();
 net();render();flush();setInterval(flush,30000);
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
