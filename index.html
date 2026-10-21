@@ -92,7 +92,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 
 <script>
 /* ====== HIER ANPASSEN ====== */
-const SCRIPT_URL="https://script.google.com/macros/s/AKfycbz2CEVC2KVzwxQd4MS2XXfdFymO3GZaPSbohNURPBTygxCKQR7Gt7kA50_0uqObpbNC/exec";
+const SCRIPT_URL="https://script.google.com/macros/s/AKfycbyavOk8umQ7y6YAId48e5qo8FdbUiKI-8HD67oxama1cIH9m63rdMx4-EM8FvITvIgS/exec";
 const SECRET="frachtlog-n7q4x2"; /* muss identisch mit SECRET im Apps-Script sein */
 /* =========================== */
 const $=id=>document.getElementById(id);
@@ -245,15 +245,10 @@ async function flush(){
  const batch=ls.get(SYNC_QUEUE,[]).filter(e=>e&&e.syncProtocol===SYNC_PROTOCOL).slice(0,5);if(!batch.length)return;
  busy=true;
  try{
-  // Erst lesend prüfen: ältere Backends dürfen keine Einträge erhalten.
-  let ready;
-  try{ready=await syncRequest({method:"GET",cache:"no-store"})}
-  catch(error){if(error.name==="SyntaxError")syncUpdateNotice();return}
-  if(!ready||ready.status!=="ready"||ready.schema!==SYNC_SCHEMA||ready.protocol!==SYNC_PROTOCOL){syncUpdateNotice();return}
   for(const e of batch){
    const j=await syncRequest({method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({},e,{secret:SECRET}))});
-   if(!j||(j.status!=="ok"&&j.status!=="dup")||j.schema!==SYNC_SCHEMA||j.protocol!==SYNC_PROTOCOL){
-    if(j&&(j.status==="ok"||j.status==="dup"))syncUpdateNotice();
+   if(!j||(j.status!=="ok"&&j.status!=="dup")){
+    if(j&&j.code==="outdated-client")syncUpdateNotice();
     break;
    }
    const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h);
