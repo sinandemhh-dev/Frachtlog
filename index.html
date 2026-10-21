@@ -223,21 +223,41 @@ $("save").addEventListener("click",()=>{
  render();toast("Gespeichert");flush();
 });
 
-let busy=false;
+let busy=false,syncNoticeShown=false;
+function syncUpdateNotice(){
+ if(syncNoticeShown)return;
+ syncNoticeShown=true;toast("Übertragung bitte aktualisieren. Eintrag bleibt auf diesem Gerät gespeichert.");
+}
+async function syncRequest(options){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),15000);
+ try{
+  const r=await fetch(SCRIPT_URL,Object.assign({},options,{signal:controller.signal}));
+  if(!r.ok)throw new Error("Übertragung nicht erreichbar");
+  return await r.json();
+ }finally{clearTimeout(timer)}
+}
 async function flush(){
- if(busy||SCRIPT_URL.indexOf("HIER_")===0)return;
- const q=ls.get("fl_q",[]);if(!q.length)return;
- busy=true;const rest=[];
- for(const e of q){
-  try{
-   const r=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({},e,{secret:SECRET}))});
-   const j=await r.json();
-   if((j.status==="ok"||j.status==="dup")&&j.schema===SYNC_SCHEMA){const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h)}
-   else if(j.status==="ok"||j.status==="dup"){rest.push(e);toast("Übertragung bitte aktualisieren. Eintrag bleibt auf diesem Gerät gespeichert.")}
-   else rest.push(e);
-  }catch(x){rest.push(e)}
- }
- ls.set("fl_q",rest);busy=false;render();
+ if(busy||!navigator.onLine||SCRIPT_URL.indexOf("HIER_")===0)return;
+ const batch=ls.get("fl_q",[]).slice(0,5);if(!batch.length)return;
+ busy=true;
+ try{
+  // Erst lesend prüfen: ältere Backends dürfen keine Einträge erhalten.
+  let ready;
+  try{ready=await syncRequest({method:"GET",cache:"no-store"})}
+  catch(error){if(error.name==="SyntaxError")syncUpdateNotice();return}
+  if(!ready||ready.status!=="ready"||ready.schema!==SYNC_SCHEMA){syncUpdateNotice();return}
+  for(const e of batch){
+   const j=await syncRequest({method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({},e,{secret:SECRET}))});
+   if(!j||(j.status!=="ok"&&j.status!=="dup")||j.schema!==SYNC_SCHEMA){
+    if(j&&(j.status==="ok"||j.status==="dup"))syncUpdateNotice();
+    break;
+   }
+   const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h);
+   // Zwischenzeitlich gespeicherte Fahrten bleiben in der aktuellen Warteschlange.
+   ls.set("fl_q",ls.get("fl_q",[]).filter(x=>x.id!==e.id));
+  }
+ }catch(error){}finally{busy=false;render()}
 }
 function render(){
  const h=ls.get("fl_h",[]).filter(e=>e.datum===today());
@@ -248,14 +268,6 @@ function render(){
 }
 function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
 window.addEventListener("online",()=>{net();flush()});window.addEventListener("offline",net);
-function queueSchemaBackfill(){
- if(ls.get("fl_sync_schema","")===SYNC_SCHEMA)return;
- const history=ls.get("fl_h",[]),queue=ls.get("fl_q",[]);
- const ids=new Set(queue.map(e=>e.id));
- history.forEach(e=>{if(!e.id)return;e.sent=false;if(!ids.has(e.id)){queue.push(Object.assign({},e));ids.add(e.id)}});
- ls.set("fl_h",history);ls.set("fl_q",queue);ls.set("fl_sync_schema",SYNC_SCHEMA);
-}
-queueSchemaBackfill();
 net();render();flush();setInterval(flush,30000);
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
