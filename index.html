@@ -3,104 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b3c49">
+<meta name="theme-color" content="#111111">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>FrachtLog</title>
+<title>ohmlog</title>
 <style>
-:root{--deep:#0b3c49;--acc:#ff7a30;--acc2:#e2631a;--bg:#eef3f4;--card:#fff;--text:#0b2a33;--sub:#567680;--line:#d3e0e3}
+:root{--ink:#111;--ink2:#333;--bg:#ececec;--card:#fff;--text:#111;--sub:#666;--line:#cfcfcf}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-header{background:var(--deep);color:#fff;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;display:flex;justify-content:space-between;align-items:center}
-header h1{margin:0;font-size:19px}
-#net{font-size:12px;padding:4px 9px;border-radius:12px;background:#1f7a3d}
-#net.off{background:#b3541e}
+header{background:var(--ink);color:#fff;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;display:flex;justify-content:space-between;align-items:center}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:30px;width:auto}
+header h1{margin:0;font-size:21px;font-weight:800;letter-spacing:.5px}
+#net{font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px;background:#fff;color:#111}
+#net.off{background:#777;color:#fff}
 main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-inset-bottom,0px))}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
 .card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--sub)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.f{margin-bottom:10px; position:relative;}
+.f{margin-bottom:10px;position:relative}
 .f label{display:block;font-size:12.5px;color:var(--sub);margin-bottom:4px;font-weight:600}
-.f input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:16px;background:var(--bg);color:var(--text)}
-.f input:focus{outline:none;border-color:var(--acc)}
-.seg{display:flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin-top:6px}
-.seg button{flex:1;padding:12px 0;background:var(--bg);border:0;color:var(--text);font-size:15px;font-weight:700}
-.seg button.on{background:var(--acc);color:#1d0b00}
-.err{border-color:#d93025 !important}
-.sub{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 4px;margin-bottom:10px}
-.sub .f{margin-bottom:6px}
-.btn{width:100%;padding:15px;background:var(--acc);color:#1d0b00;border:0;border-radius:9px;font-size:17px;font-weight:800}
-.btn:active{background:var(--acc2)}
+.f input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:16px;background:#f7f7f7;color:var(--text)}
+.f input::placeholder{color:#a0a0a0}
+.f input:focus{outline:none;border-color:var(--ink);background:#fff}
+.f input[readonly]{background:#e6e6e6;color:#444}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;padding:12px 0;background:#f7f7f7;border:0;color:var(--text);font-size:15px;font-weight:700}
+.seg button.on{background:var(--ink);color:#fff}
+.err{border-color:#d00 !important}
+.btn{width:100%;padding:15px;background:var(--ink);color:#fff;border:0;border-radius:9px;font-size:17px;font-weight:800}
+.btn:active{background:var(--ink2)}
 .e{border-bottom:1px solid var(--line);padding:9px 0;font-size:14px}
 .e:last-child{border:0}
 .e .t{display:flex;justify-content:space-between;font-weight:700}
 .e .m{color:var(--sub);font-size:13px;margin-top:2px}
 .empty{color:var(--sub);text-align:center;padding:14px 0;font-size:14px}
-#warn{display:none;background:#fff3cd;border:1px solid #f0c95c;color:#5c4400;padding:10px;border-radius:9px;margin-bottom:12px;font-size:13px}
-#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--deep);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s}
+#warn{display:none;background:#eee;border:1px solid #999;color:#111;padding:10px;border-radius:9px;margin-bottom:12px;font-size:13px}
+#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;max-width:90%;text-align:center}
 #toast.show{opacity:1}
-
-.sugg {display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; max-height:200px; overflow-y:auto; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-top:4px;}
-.sugg div {padding:12px; border-bottom:1px solid var(--line); font-size:15px; color:var(--text); cursor:pointer;}
-.sugg div:last-child {border-bottom:0;}
-.sugg div:active {background:var(--bg);}
+.sugg{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;max-height:220px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.2);margin-top:4px}
+.sugg div{padding:12px;border-bottom:1px solid var(--line);font-size:15px}
+.sugg div:last-child{border-bottom:0}
+.sugg div:active{background:#eee}
 </style>
 </head>
 <body>
-<header><h1>🚛 FrachtLog</h1><span id="net">online</span></header>
+<header><div class="brand"><img alt="" src="data:image/png;base64,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"><h1>ohmlog</h1></div><span id="net">online</span></header>
 <main>
 <div id="warn">Backend nicht verbunden: In der Datei index.html die Variable SCRIPT_URL eintragen.</div>
 
 <div class="card"><h2>Fahrt</h2>
  <div class="row">
-  <div class="f"><label>Fahrzeug</label><input id="fz" placeholder="HH OL 1122" autocapitalize="characters"></div>
-  <div class="f"><label>Fahrer</label><input id="fa" placeholder="Name"></div>
+  <div class="f"><label>Fahrzeug Kennzeichen *</label><input id="fz" placeholder="HHOL1110" autocapitalize="characters" autocomplete="off"></div>
+  <div class="f"><label>Fahrer *</label><input id="fa" placeholder="Name"></div>
  </div>
  <div class="row">
-  <div class="f"><label>Datum</label><input id="dt" type="date"></div>
+  <div class="f"><label>Datum *</label><input id="dt" type="date"></div>
   <div class="f"><label>Tag</label><input id="tg" readonly></div>
  </div>
- <div class="f"><label>Auftraggeber</label><input id="ag" placeholder="z. B. LTH"></div>
+ <div class="f"><label>Auftraggeber</label><input id="ag" value="LTH" readonly></div>
 </div>
 
 <div class="card"><h2>Fahrstrecke &amp; Container</h2>
+ <div class="f"><label>Fahrtnummer *</label><input id="fn" placeholder="20-95625.002-1.1" autocomplete="off"></div>
+ <div class="f"><label>Auftragsnummer *</label><input id="an" autocomplete="off"></div>
  <div class="row">
-  <div class="f"><label>Fahrt-Nr</label><input id="fn" inputmode="numeric"></div>
-  <div class="f"><label>Auftragsnummer</label><input id="an" inputmode="numeric"></div>
+  <div class="f"><label>Von *</label><input id="von" autocomplete="off" placeholder="CTA / CTB …" autocapitalize="characters"><div id="von-sugg" class="sugg"></div></div>
+  <div class="f"><label>Nach *</label><input id="nach" autocomplete="off" placeholder="PRAHL&amp;BARSOE / EDEKA …" autocapitalize="characters"><div id="nach-sugg" class="sugg"></div></div>
  </div>
- 
+ <div class="f"><label>Größe *</label>
+  <div class="seg" id="sSize"><button data-v="20">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
+ </div>
+ <div class="f"><label id="l1">Containernummer *</label><input id="cn1" placeholder="TLLU 111.222-3" autocapitalize="characters" autocomplete="off"></div>
+ <div class="f" id="box2" style="display:none"><label>Containernummer 2 *</label><input id="cn2" placeholder="TLLU 111.222-3" autocapitalize="characters" autocomplete="off"></div>
+ <div class="f"><label>L / V *</label><div class="seg" id="sLV"><button data-v="L">Leer</button><button data-v="V">Voll</button></div></div>
  <div class="row">
-  <div class="f">
-   <label>Von *</label>
-   <input id="von" autocomplete="off" placeholder="Tippen (z.B. E)..." autocapitalize="characters">
-   <div id="von-sugg" class="sugg"></div>
-  </div>
-  <div class="f">
-   <label>Nach *</label>
-   <input id="nach" autocomplete="off" placeholder="Tippen (z.B. E)..." autocapitalize="characters">
-   <div id="nach-sugg" class="sugg"></div>
-  </div>
+  <div class="f"><label>Chassis Kennzeichen *</label><input id="ch" placeholder="HBHL1110" autocapitalize="characters" autocomplete="off"></div>
+  <div class="f"><label>Chassis A-Nummer *</label><input id="ca" placeholder="A11" autocapitalize="characters" autocomplete="off"></div>
  </div>
-
- <div class="f"><label>Größe</label>
-  <div class="seg" id="sSize"><button data-v="20" class="on">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
- </div>
- <div class="sub">
-  <div class="f"><label id="l1">Container-Nr.</label><input id="cn1" placeholder="CMAU 0307007" autocapitalize="characters">
-   <div class="seg" id="sTyp1"><button data-v="DC" class="on">DC</button><button data-v="HC">HC</button></div></div>
- </div>
- <div class="sub" id="box2" style="display:none">
-  <div class="f"><label>Container 2</label><input id="cn2" placeholder="CGMU 5792562" autocapitalize="characters">
-   <div class="seg" id="sTyp2"><button data-v="DC" class="on">DC</button><button data-v="HC">HC</button></div></div>
- </div>
- <div class="f"><label>L / V</label><div class="seg" id="sLV"><button data-v="L" class="on">L (Leer)</button><button data-v="V">V (Voll)</button></div></div>
- <div class="f"><label>Chassis</label><input id="ch" autocapitalize="characters"></div>
- <div class="f"><label>Bemerkungen / Wartezeiten</label><input id="bm"></div>
+ <div class="f"><label>Probleme</label><input id="bm" placeholder="Wartezeit? / Bekleme?" autocomplete="off"></div>
  <button class="btn" id="save">Eintrag speichern</button>
 </div>
 
-<div class="card"><h2>Noch nicht gesendet</h2><div id="list"><div class="empty">Alles gesendet ✓</div></div></div>
+<div class="card"><h2>Meine Einträge heute</h2><div id="list"><div class="empty">Noch keine Einträge</div></div></div>
 </main>
 <div id="toast"></div>
 
@@ -112,99 +98,76 @@ const SECRET="frachtlog-n7q4x2"; /* muss identisch mit SECRET im Apps-Script sei
 const $=id=>document.getElementById(id);
 const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-const V={size:"20",typ1:"DC",typ2:"DC",lv:"L"};
+const V={size:"",lv:""};
+const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DSV TCO","DUSS","EDEKA","EKOM","EUGS","FIEGE HCCR","FREUDENBERG HCCR","HCCR","HCS","HKL UCS","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TWS","UCS","UNIKAI","UNITAINER","VETI"];
 
-const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DSV TCO","DUSS","EDEKA","EKOM","EUGS","FIEGE HCCR","FREUDENBERG HCCR","HCCR","HCS","HKL UCS","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TWS","UCS","UNIKAI","UNITAINER","VETR PRAHL&BARSOE"];
-
-function locVal(id){return $(id).value.trim().toUpperCase()}
-
-/* Vorschlaege: nur Orte, die mit den getippten Buchstaben ANFANGEN */
-function setupAutocomplete(id) {
- const inp = $(id);
- const box = $(id+"-sugg");
- 
- inp.addEventListener("input", () => {
-  inp.classList.remove("err");
-  const val = inp.value.trim().toUpperCase();
-  if (!val) { box.style.display="none"; return; }
-  
-  const matches = LOCS.filter(l => l.startsWith(val));
-  let html = matches.map(m => `<div data-v="${esc(m)}">${esc(m)}</div>`).join("");
-  if (!LOCS.includes(val)) html += `<div data-v="${esc(val)}" style="color:var(--acc2);font-weight:700">✎ „${esc(val)}“ selbst eintragen</div>`;
-  box.innerHTML = html;
-  box.style.display = html ? "block" : "none";
- });
-
- box.addEventListener("click", e => {
-  const d = e.target.closest("div[data-v]");
-  if(d){
-   inp.value = d.dataset.v;
-   inp.classList.remove("err");
-   box.style.display = "none";
-  }
- });
-
- document.addEventListener("click", e => {
-  if(e.target !== inp && e.target.parentNode !== box) {
-   box.style.display = "none";
-  }
- });
-}
-setupAutocomplete("von");
-setupAutocomplete("nach");
-
-let fnTouched=false;
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
 function esc(s){return String(s==null?"":s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]))}
 function setTag(){const v=$("dt").value;$("tg").value=v?TAGE[new Date(v+"T12:00:00").getDay()]:""}
 function setSeg(id,v){$(id).querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v))}
-function seg(id,key,cb){$(id).addEventListener("click",e=>{if(e.target.tagName!=="BUTTON")return;V[key]=e.target.dataset.v;setSeg(id,V[key]);if(cb)cb()})}
+function seg(id,key,cb){$(id).addEventListener("click",e=>{if(e.target.tagName!=="BUTTON")return;V[key]=e.target.dataset.v;setSeg(id,V[key]);$(id).classList.remove("err");if(cb)cb()})}
 function onSize(){
  const two=V.size==="2x20";
  $("box2").style.display=two?"block":"none";
- $("l1").textContent=two?"Container 1":"Container-Nr.";
- const d=V.size==="45"?"HC":"DC";V.typ1=d;V.typ2=d;setSeg("sTyp1",d);setSeg("sTyp2",d);
+ $("l1").textContent=two?"Containernummer 1 *":"Containernummer *";
 }
-function nextFn(){
- const fz=$("fz").value.trim(),fa=$("fa").value.trim(),dt=$("dt").value;
- const h=ls.get("fl_h",[]).filter(e=>e.datum===dt&&e.fahrer===fa&&e.fahrzeug===fz);
- const n=h.map(e=>parseInt(e.fahrtnr)).filter(x=>!isNaN(x));
- return String(Math.max(h.length,...n,0)+1);
-}
-function autoFn(){if(!fnTouched)$("fn").value=nextFn()}
 
-if(SCRIPT_URL.indexOf("HIER_")===0)$("warn").style.display="block";
+/* Vorschläge ab 2 Buchstaben */
+function setupAC(id){
+ const inp=$(id),box=$(id+"-sugg");
+ inp.addEventListener("input",()=>{
+  const v=inp.value.trim().toUpperCase();
+  if(v.length<2){box.style.display="none";return}
+  const m=LOCS.filter(l=>l.startsWith(v)).concat(LOCS.filter(l=>!l.startsWith(v)&&l.includes(v))).slice(0,6);
+  if(!m.length){box.style.display="none";return}
+  box.innerHTML=m.map(x=>`<div>${esc(x)}</div>`).join("");
+  box.style.display="block";
+ });
+ box.addEventListener("click",e=>{if(e.target.tagName==="DIV"){inp.value=e.target.textContent;inp.classList.remove("err");box.style.display="none"}});
+ document.addEventListener("click",e=>{if(e.target!==inp&&!box.contains(e.target))box.style.display="none"});
+}
+setupAC("von");setupAC("nach");
+
+/* Kennzeichen: Leerzeichen entfernen, Großbuchstaben */
+["fz","ch","ca"].forEach(id=>$(id).addEventListener("input",()=>{const el=$(id);const p=el.selectionStart;el.value=el.value.replace(/\s+/g,"").toUpperCase()}));
+document.querySelectorAll("input").forEach(i=>i.addEventListener("input",()=>i.classList.remove("err")));
+
+let dtTouched=false;
 $("dt").value=today();setTag();
-["fz","fa","ag"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
-seg("sSize","size",onSize);seg("sTyp1","typ1");seg("sTyp2","typ2");seg("sLV","lv");
-$("dt").addEventListener("input",()=>{setTag();autoFn()});
-$("fz").addEventListener("input",autoFn);$("fa").addEventListener("input",autoFn);
-$("fn").addEventListener("input",()=>{fnTouched=true});
-autoFn();
+$("dt").addEventListener("input",()=>{dtTouched=true;setTag()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!dtTouched){$("dt").value=today();setTag()}});
+["fz","fa"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
+seg("sSize","size",onSize);seg("sLV","lv");
+if(SCRIPT_URL.indexOf("HIER_")===0)$("warn").style.display="block";
+
+function req(id){const el=$(id);const ok=el.value.trim()!=="";el.classList.toggle("err",!ok);return ok}
+function reqSeg(id,v){$(id).classList.toggle("err",!v);return !!v}
 
 $("save").addEventListener("click",()=>{
- const fz=$("fz").value.trim(),fa=$("fa").value.trim();
- if(!fz||!fa){toast("Fahrzeug und Fahrer eingeben");return}
- const von=locVal("von"),nach=locVal("nach");
- if(!von||!nach){
-  if(!von)$("von").classList.add("err");
-  if(!nach)$("nach").classList.add("err");
-  toast("Von und Nach sind Pflichtfelder");return
- }
- ["fz","fa","ag"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
+ let ok=true;
+ ["fz","fa","dt","fn","an","von","nach","cn1","ch","ca"].forEach(id=>{if(!req(id))ok=false});
  const two=V.size==="2x20";
- const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value||today(),tag:$("tg").value,
-  fahrzeug:fz,fahrer:fa,auftraggeber:$("ag").value.trim(),fahrtnr:$("fn").value.trim(),von:von,nach:nach,
-  groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),typ1:V.typ1,
-  container2:two?$("cn2").value.trim().toUpperCase():"",typ2:two?V.typ2:"",
-  lv:V.lv,chassis:$("ch").value.trim().toUpperCase(),auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false};
+ if(two&&!req("cn2"))ok=false;
+ if(!reqSeg("sSize",V.size))ok=false;
+ if(!reqSeg("sLV",V.lv))ok=false;
+ if(!ok){toast("Bitte alle Pflichtfelder ausfüllen");return}
+ const fz=$("fz").value.trim(),fa=$("fa").value.trim();
+ ["fz","fa"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
+ const ch=$("ch").value.trim(),ca=$("ca").value.trim();
+ const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value,tag:$("tg").value,
+  fahrzeug:fz,fahrer:fa,auftraggeber:"LTH",fahrtnr:$("fn").value.trim(),
+  von:$("von").value.trim().toUpperCase(),nach:$("nach").value.trim().toUpperCase(),
+  groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),typ1:"",
+  container2:two?$("cn2").value.trim().toUpperCase():"",typ2:"",
+  lv:V.lv,chassis:ch,chassisANummer:ca,
+  auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false};
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
- ["von","nach","cn1","cn2","ch","an","bm"].forEach(id=>$(id).value="");
- $("von-sugg").style.display="none"; $("nach-sugg").style.display="none";
- V.size="20";V.lv="L";setSeg("sSize","20");setSeg("sLV","L");onSize();
- fnTouched=false;autoFn();
+ ["fn","an","von","nach","cn1","cn2","ch","ca","bm"].forEach(id=>$(id).value="");
+ $("von-sugg").style.display="none";$("nach-sugg").style.display="none";
+ V.size="";V.lv="";setSeg("sSize","");setSeg("sLV","");onSize();
+ dtTouched=false;$("dt").value=today();setTag();
  render();toast("Gespeichert");flush();
 });
 
@@ -224,23 +187,16 @@ async function flush(){
  ls.set("fl_q",rest);busy=false;render();
 }
 function render(){
- const h=ls.get("fl_h",[]).filter(e=>e.datum===today()&&!e.sent);
+ const h=ls.get("fl_h",[]).filter(e=>e.datum===today());
  $("list").innerHTML=h.length?h.map(e=>{
-  const c=e.groesse==="2x20"?`${esc(e.container1)||"—"} ${esc(e.typ1)} + ${esc(e.container2)||"—"} ${esc(e.typ2)}`:`${esc(e.container1)||"—"} ${esc(e.typ1)}`;
-  return `<div class="e"><div class="t"><span>${e.fahrtnr?"#"+esc(e.fahrtnr)+" ":""}${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
-  <div class="m">${c} · ${esc(e.groesse)} · ${esc(e.lv)}${e.auftragsnummer?" · "+esc(e.auftragsnummer):""}</div></div>`}).join(""):'<div class="empty">Alles gesendet ✓</div>';
+  const c=e.groesse==="2x20"?`${esc(e.container1)||"—"} + ${esc(e.container2)||"—"}`:`${esc(e.container1)||"—"}`;
+  return `<div class="e"><div class="t"><span>${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
+  <div class="m">${e.fahrtnr?esc(e.fahrtnr)+" · ":""}${c} · ${esc(e.groesse)} · ${e.lv==="L"?"Leer":"Voll"}</div></div>`}).join(""):'<div class="empty">Noch keine Einträge</div>';
 }
 function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
 window.addEventListener("online",()=>{net();flush()});window.addEventListener("offline",net);
 net();render();flush();setInterval(flush,30000);
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for (let registration of registrations) {
-      registration.unregister();
-    }
-  });
-}
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
 </html>
