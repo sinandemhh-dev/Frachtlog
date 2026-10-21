@@ -100,6 +100,8 @@ const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Sam
 const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const V={size:"",lv:""};
 const SYNC_SCHEMA="ohmlog-app-fields-v2";
+const SYNC_PROTOCOL="ohmlog-new-saves-v1";
+const SYNC_QUEUE="fl_q_new_saves_v1";
 function nextFahrtnummer(){
  const n=Number(ls.get("fl_next_fahrtnummer",1));
  return Number.isSafeInteger(n)&&n>0?n:1;
@@ -211,9 +213,10 @@ $("save").addEventListener("click",()=>{
   groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),
   container2:two?$("cn2").value.trim().toUpperCase():"",
   lv:V.lv,chassis:ch,chassisANummer:ca,
-  auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false};
+  auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false,syncProtocol:SYNC_PROTOCOL};
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
- ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
+ // Die alte Warteschlange bleibt unverändert gespeichert und wird nicht mehr übertragen.
+ ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).concat([e]));
  ls.set("fl_next_fahrtnummer",Number(e.fahrtnr)+1);
  $("fn").value=String(nextFahrtnummer());
  ["an","von","nach","cn1","cn2","ch","ca","bm"].forEach(id=>$(id).value="");
@@ -239,23 +242,23 @@ async function syncRequest(options){
 }
 async function flush(){
  if(busy||!navigator.onLine||SCRIPT_URL.indexOf("HIER_")===0)return;
- const batch=ls.get("fl_q",[]).slice(0,5);if(!batch.length)return;
+ const batch=ls.get(SYNC_QUEUE,[]).filter(e=>e&&e.syncProtocol===SYNC_PROTOCOL).slice(0,5);if(!batch.length)return;
  busy=true;
  try{
   // Erst lesend prüfen: ältere Backends dürfen keine Einträge erhalten.
   let ready;
   try{ready=await syncRequest({method:"GET",cache:"no-store"})}
   catch(error){if(error.name==="SyntaxError")syncUpdateNotice();return}
-  if(!ready||ready.status!=="ready"||ready.schema!==SYNC_SCHEMA){syncUpdateNotice();return}
+  if(!ready||ready.status!=="ready"||ready.schema!==SYNC_SCHEMA||ready.protocol!==SYNC_PROTOCOL){syncUpdateNotice();return}
   for(const e of batch){
    const j=await syncRequest({method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({},e,{secret:SECRET}))});
-   if(!j||(j.status!=="ok"&&j.status!=="dup")||j.schema!==SYNC_SCHEMA){
+   if(!j||(j.status!=="ok"&&j.status!=="dup")||j.schema!==SYNC_SCHEMA||j.protocol!==SYNC_PROTOCOL){
     if(j&&(j.status==="ok"||j.status==="dup"))syncUpdateNotice();
     break;
    }
    const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h);
    // Zwischenzeitlich gespeicherte Fahrten bleiben in der aktuellen Warteschlange.
-   ls.set("fl_q",ls.get("fl_q",[]).filter(x=>x.id!==e.id));
+   ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).filter(x=>x.id!==e.id));
   }
  }catch(error){}finally{busy=false;render()}
 }
