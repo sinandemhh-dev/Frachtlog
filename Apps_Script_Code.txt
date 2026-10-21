@@ -1,6 +1,7 @@
 // ohmlog: App-Felder und Sheet1 verwenden dieselben Spalten.
 const SECRET = "frachtlog-n7q4x2"; // muss identisch mit SECRET in index.html sein
 const SCHEMA = "ohmlog-app-fields-v2";
+const SYNC_PROTOCOL = "ohmlog-new-saves-v1";
 const FIELDS = [
   ["Fahrzeug Kennzeichen", "fahrzeug"], ["Fahrer", "fahrer"],
   ["Datum", "datum"], ["Tag", "tag"], ["Auftraggeber", "auftraggeber"],
@@ -165,15 +166,19 @@ function storedValue(data, key) {
 
 // Verbindungsprüfung ohne Tabellenzugriff oder Schreibvorgang.
 function doGet() {
-  return out({ status:"ready", schema:SCHEMA });
+  return out({ status:"ready", schema:SCHEMA, protocol:SYNC_PROTOCOL });
 }
 
 function doPost(e) {
+  let d;
+  try { d = JSON.parse(e.postData.contents); }
+  catch (error) { return out({ error:String(error) }); }
+  if (!d || d.secret !== SECRET) return out({ error:"unauthorized" });
+  // Alte App-Versionen dürfen ihre gespeicherte Historie nicht erneut einfügen.
+  if (d.syncProtocol !== SYNC_PROTOCOL) return out({ error:"App bitte aktualisieren.", code:"outdated-client" });
+  if (typeof d.id !== "string" || !d.id.trim()) return out({ error:"ID fehlt" });
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
-    const d = JSON.parse(e.postData.contents);
-    if (d.secret !== SECRET) return out({ error:"unauthorized" });
-    if (typeof d.id !== "string" || !d.id.trim()) return out({ error:"ID fehlt" });
     const sh = dataSheet(); ensureColumns(sh);
     const last = Math.max(sh.getLastRow(), 1);
     if (last > 1) {
@@ -190,13 +195,13 @@ function doPost(e) {
           }
         });
         if (changed) { sh.getRange(row, 1, 1, DATA_COLS).setValues([cells]); SpreadsheetApp.flush(); }
-        return out({ status:"dup", schema:SCHEMA });
+        return out({ status:"dup", schema:SCHEMA, protocol:SYNC_PROTOCOL });
       }
     }
     if (last + 1 > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 100);
     const values = FIELDS.map(field => field[1] ? storedValue(d, field[1]) : new Date());
     sh.getRange(last + 1, 1, 1, DATA_COLS).setValues([values]); SpreadsheetApp.flush();
-    return out({ status:"ok", schema:SCHEMA });
+    return out({ status:"ok", schema:SCHEMA, protocol:SYNC_PROTOCOL });
   } catch (error) { return out({ error:String(error) }); }
   finally { lock.releaseLock(); }
 }
