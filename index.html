@@ -67,7 +67,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 
 <div class="card"><h2>Fahrstrecke &amp; Container</h2>
  <div class="f"><label>Fahrtnummer *</label><input id="fn" value="1" readonly autocomplete="off"></div>
- <div class="f"><label>Auftragsnummer *</label><input id="an" placeholder="20-95625.002-1.1" autocomplete="off"></div>
+ <div class="f"><label>Auftragsnummer *</label><input id="an" placeholder="20-95625.002-1" autocomplete="off"></div>
  <div class="row">
   <div class="f"><label for="von">Von *</label><input id="von" autocomplete="off" placeholder="CTA / CTB …" autocapitalize="characters"><div id="von-sugg" class="sugg"></div></div>
   <div class="f"><label for="nach">Nach *</label><input id="nach" autocomplete="off" placeholder="PRAHL&amp;BARSOE / EDEKA …" autocapitalize="characters"><div id="nach-sugg" class="sugg"></div></div>
@@ -79,7 +79,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
  <div class="f" id="box2" style="display:none"><label>Containernummer 2 *</label><input id="cn2" placeholder="TLLU 111.222-3" autocapitalize="characters" autocomplete="off"></div>
  <div class="f"><label>L / V *</label><div class="seg" id="sLV"><button data-v="L">Leer</button><button data-v="V">Voll</button></div></div>
  <div class="row">
-  <div class="f"><label>Chassis Kennzeichen *</label><input id="ch" placeholder="HBHL1110" autocapitalize="characters" autocomplete="off"></div>
+  <div class="f"><label>Chassis Kennzeichen *</label><input id="ch" placeholder="HBHL111" autocapitalize="characters" autocomplete="off"></div>
   <div class="f"><label>Chassis A-Nummer *</label><input id="ca" placeholder="A11" autocapitalize="characters" autocomplete="off"></div>
  </div>
  <div class="f"><label>Probleme</label><input id="bm" placeholder="Wartezeit? / Bekleme?" autocomplete="off"></div>
@@ -107,7 +107,7 @@ function nextFahrtnummer(){
  return Number.isSafeInteger(n)&&n>0?n:1;
 }
 $("fn").value=String(nextFahrtnummer());
-const LOCS=["BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DSV TCO","DUSS","EDEKA","EKOM","EUGS","FIEGE HCCR","FREUDENBERG HCCR","HCCR","HCS","HKL UCS","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TWS","UCS","UNIKAI","UNITAINER","VETI"];
+const LOCS=["BASTE&LANGE","BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DSV TCO","DUSS","EDEKA","EKOM","EUGS","FIEGE HCCR","FREUDENBERG HCCR","HCCR","HCS","HKL UCS","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TWS","UCS","UNIKAI","UNITAINER","VETI"];
 
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
@@ -154,7 +154,7 @@ let dtTouched=false;
 $("dt").value=today();setTag();
 $("dt").addEventListener("input",()=>{dtTouched=true;setTag()});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!dtTouched){$("dt").value=today();setTag()}});
-["fz","fa"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
+["fz","fa","ca"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
 seg("sSize","size",onSize);seg("sLV","lv");
 if(SCRIPT_URL.indexOf("HIER_")===0)$("warn").style.display="block";
 
@@ -164,12 +164,10 @@ function formatError(id,message){
 }
 function validateFormats(){
  const checks=[
-  ["fz",/^[A-ZÄÖÜ]{1,3}[A-Z]{1,2}[1-9][0-9]{3}$/, "Kennzeichen: Buchstaben und genau 4 Ziffern, z. B. HHOL1110"],
+  ["ch",/^[A-ZÄÖÜ]{1,3}[A-Z]{1,2}[0-9]{2,4}$/, "Chassis Kennzeichen: Buchstaben und 2 bis 4 Ziffern, z. B. HBHL111"],
   ["fa",/^[\p{L}][\p{L}\p{M} .’'\-]{1,79}$/u, "Fahrer: Bitte einen Namen ohne Zahlen eingeben"],
   ["fn",/^[1-9][0-9]*$/, "Fahrtnummer muss eine positive ganze Zahl sein"],
-  ["an",/^[0-9]{2}-[0-9]{5}\.[0-9]{3}-[0-9]+\.[0-9]+$/, "Auftragsnummer: z. B. 20-95625.002-1.1"],
-  ["ch",/^[A-ZÄÖÜ]{1,3}[A-Z]{1,2}[1-9][0-9]{3}$/, "Chassis Kennzeichen: Buchstaben und genau 4 Ziffern, z. B. HBHL1110"],
-  ["ca",/^A[0-9]+$/, "Chassis A-Nummer: A gefolgt von Zahlen, z. B. A11"]
+  ["an",/^[0-9]{2}-[0-9]{5}\.[0-9]{3}-[0-9]+(\.[0-9]+)?$/, "Auftragsnummer: z. B. 20-95625.002-1 oder 20-95625.002-1.1"],
  ];
  for(const [id,re,message] of checks){$(id).value=$(id).value.trim();if(!re.test($(id).value))return formatError(id,message)}
  const date=$("dt").value;
@@ -204,7 +202,7 @@ $("save").addEventListener("click",()=>{
  if(!ok){toast("Bitte alle Pflichtfelder ausfüllen");return}
  if(!validateFormats())return;
  const fz=$("fz").value.trim(),fa=$("fa").value.trim();
- ["fz","fa"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
+ ["fz","fa","ca"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
  const ch=$("ch").value.trim(),ca=$("ca").value.trim();
  $("fn").value=String(nextFahrtnummer());
  const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value,tag:$("tg").value,
@@ -219,7 +217,7 @@ $("save").addEventListener("click",()=>{
  ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).concat([e]));
  ls.set("fl_next_fahrtnummer",Number(e.fahrtnr)+1);
  $("fn").value=String(nextFahrtnummer());
- ["an","von","nach","cn1","cn2","ch","ca","bm"].forEach(id=>$(id).value="");
+ ["an","von","nach","cn1","cn2","ch","bm"].forEach(id=>$(id).value="");
  $("von-sugg").style.display="none";$("nach-sugg").style.display="none";
  V.size="";V.lv="";setSeg("sSize","");setSeg("sLV","");onSize();
  dtTouched=false;$("dt").value=today();setTag();
