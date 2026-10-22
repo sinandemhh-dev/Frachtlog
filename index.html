@@ -70,7 +70,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
  <div class="f"><label>Auftragsnummer *</label><input id="an" placeholder="20-95625.002-1" autocomplete="off"></div>
  <div class="row">
   <div class="f"><label for="von">Von *</label><input id="von" autocomplete="off" placeholder="CTA / CTB …" autocapitalize="characters"><div id="von-sugg" class="sugg"></div></div>
-  <div class="f"><label for="nach">Nach *</label><input id="nach" autocomplete="off" placeholder="PRAHL&amp;BARSOE / EDEKA …" autocapitalize="characters"><div id="nach-sugg" class="sugg"></div></div>
+  <div class="f"><label for="nach">Nach *</label><input id="nach" autocomplete="off" placeholder="PRAHL&amp;BARSOE / SCANGLOBAL …" autocapitalize="characters"><div id="nach-sugg" class="sugg"></div></div>
  </div>
  <div class="f"><label>Größe *</label>
   <div class="seg" id="sSize"><button data-v="20">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
@@ -107,7 +107,7 @@ function nextFahrtnummer(){
  return Number.isSafeInteger(n)&&n>0?n:1;
 }
 $("fn").value=String(nextFahrtnummer());
-const LOCS=["BASTE&LANGE","BETTENDUSCHER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DSV TCO","DUSS","EDEKA","EKOM","EUGS","FIEGE HCCR","FREUDENBERG HCCR","HCCR","HCS","HKL UCS","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","TANKFELD","TWS","UCS","UNIKAI","UNITAINER","VETI"];
+const LOCS=["ANHALT","BASTE&LANGE","BETTENDUSCHER","BLUEWATER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DCP","DEUFOL","DSV TCO","DUSS","EKOM","EUGBHV","EUGS","FIEGE HCCR","FREUDENBERG HCCR","GROUP7","HCCR","HCS","HKL UCS","KRAUSELAGER","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTHNEU","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","NTB","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","SWT","TANKFELD","TCO","TWS","UCS","UNIKAI","UNITAINER","VETI","WCS","WÖHRMANN"];
 
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
