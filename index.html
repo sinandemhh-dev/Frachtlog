@@ -91,6 +91,8 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 <div id="dlg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-start;justify-content:center;padding:16px;overflow:auto"><div class="card" style="width:100%;max-width:420px;margin:0 auto">
  <h2 id="dlg-t">Fahrt</h2>
  <div id="dlg-edit-box">
+  <div class="row"><div class="f"><label>Datum *</label><input id="x_dt" type="date"></div><div class="f"><label>Fahrtnummer *</label><input id="x_fn" inputmode="numeric" autocomplete="off"></div></div>
+  <div class="row"><div class="f"><label>Fahrzeug Kennzeichen *</label><input id="x_fz" autocomplete="off" autocapitalize="characters"></div><div class="f"><label>Fahrer *</label><input id="x_fa" autocomplete="off"></div></div>
   <div class="row"><div class="f"><label>Von *</label><input id="x_von" autocomplete="off" autocapitalize="characters"></div><div class="f"><label>Nach *</label><input id="x_nach" autocomplete="off" autocapitalize="characters"></div></div>
   <div class="f"><label>Größe *</label><div class="seg" id="x_size"><button type="button" data-v="20">20</button><button type="button" data-v="40">40</button><button type="button" data-v="45">45</button><button type="button" data-v="2x20">2×20</button></div></div>
   <div class="f"><label>L / V *</label><div class="seg" id="x_lv"><button type="button" data-v="L">Leer</button><button type="button" data-v="V">Voll</button></div></div>
@@ -299,11 +301,12 @@ function xSet(id,key){$(id).querySelectorAll("button").forEach(b=>b.classList.to
  if(key==="size")$("x_box2").style.display=X.size==="2x20"?"block":"none";
 }));
 let dlgId=null,delArmed=false;
-function xFields(){return ["x_von","x_nach","x_cn1","x_cn2","x_an","x_ch","x_ca","x_bm"]}
+function xFields(){return ["x_dt","x_fn","x_fz","x_fa","x_von","x_nach","x_cn1","x_cn2","x_an","x_ch","x_ca","x_bm"]}
 function openDlg(id){
  const e=ls.get("fl_h",[]).find(x=>x.id===id);if(!e)return;
  dlgId=id;delArmed=false;
  $("dlg-t").textContent="Fahrt "+(e.fahrtnr||"");
+ $("x_dt").value=e.datum;$("x_fn").value=e.fahrtnr;$("x_fz").value=e.fahrzeug;$("x_fa").value=e.fahrer;
  $("x_von").value=e.von;$("x_nach").value=e.nach;$("x_cn1").value=e.container1;$("x_cn2").value=e.container2||"";
  $("x_an").value=e.auftragsnummer;$("x_ch").value=e.chassis;$("x_ca").value=e.chassisANummer;$("x_bm").value=e.bemerkung||"";
  X.size=e.groesse;X.lv=e.lv;xSet("x_size","size");xSet("x_lv","lv");
@@ -316,6 +319,12 @@ function closeDlg(){$("dlg").style.display="none";dlgId=null;delArmed=false}
 function xError(id,msg){const el=$(id);el.classList.add("err");toast(msg);el.focus();return false}
 function xValidate(){
  const g=id=>$(id).value.trim();
+ const dv=g("x_dt"),dp=new Date(dv+"T12:00:00");
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(dv)||!Number.isFinite(dp.getTime())||dp.getFullYear()!==Number(dv.slice(0,4))||dp.getMonth()+1!==Number(dv.slice(5,7))||dp.getDate()!==Number(dv.slice(8,10)))return xError("x_dt","Bitte ein gültiges Datum eingeben");
+ if(!/^[1-9][0-9]*$/.test(g("x_fn")))return xError("x_fn","Fahrtnummer muss eine positive ganze Zahl sein");
+ $("x_fz").value=g("x_fz").replace(/\s+/g,"").toUpperCase();
+ if(!$("x_fz").value)return xError("x_fz","Bitte alle Pflichtfelder ausfüllen");
+ if(!/^[\p{L}][\p{L}\p{M} .’'\-]{1,79}$/u.test(g("x_fa")))return xError("x_fa","Fahrer: Bitte einen Namen ohne Zahlen eingeben");
  for(const id of ["x_von","x_nach"]){
   const name=normLoc(g(id));
   if(!name)return xError(id,"Bitte alle Pflichtfelder ausfüllen");
@@ -346,7 +355,7 @@ $("dlg").addEventListener("click",ev=>{if(ev.target===$("dlg"))closeDlg()});
 $("dlg-save").addEventListener("click",()=>{
  const old=ls.get("fl_h",[]).find(x=>x.id===dlgId);if(!old){closeDlg();return}
  if(!xValidate())return;
- const e=Object.assign({},old,{von:$("x_von").value.trim(),nach:$("x_nach").value.trim(),groesse:X.size,lv:X.lv,
+ const e=Object.assign({},old,{datum:$("x_dt").value,tag:TAGE[new Date($("x_dt").value+"T12:00:00").getDay()],fahrtnr:$("x_fn").value.trim(),fahrzeug:$("x_fz").value,fahrer:$("x_fa").value.trim(),von:$("x_von").value.trim(),nach:$("x_nach").value.trim(),groesse:X.size,lv:X.lv,
   container1:$("x_cn1").value.trim().toUpperCase(),container2:X.size==="2x20"?$("x_cn2").value.trim().toUpperCase():"",
   auftragsnummer:$("x_an").value.trim(),chassis:$("x_ch").value,chassisANummer:$("x_ca").value,bemerkung:$("x_bm").value.trim(),syncProtocol:SYNC_PROTOCOL});
  [e.von,e.nach].forEach(addLocation);
