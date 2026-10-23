@@ -107,7 +107,27 @@ function nextFahrtnummer(){
  return Number.isSafeInteger(n)&&n>0?n:1;
 }
 $("fn").value=String(nextFahrtnummer());
-const LOCS=["ANHALT","BASTE&LANGE","BETTENDUSCHER","BLUEWATER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DCP","DEUFOL","DSV TCO","DUSS","EKOM","EUGBHV","EUGS","FIEGE HCCR","FREUDENBERG HCCR","GROUP7","HANSEREPAIR","HCCR","HCS","HKL UCS","KRAUSELAGER","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTHNEU","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","NTB","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","SWT","TANKFELD","TCO","TWS","UCS","UNIKAI","UNITAINER","VETI","WCS","WÖHRMANN"];
+const LOCS_BASE=["ANHALT","BASTE&LANGE","BETTENDUSCHER","BLUEWATER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DCP","DEUFOL","DSV TCO","DUSS","EKOM","EUGBHV","EUGS","FIEGE HCCR","FREUDENBERG HCCR","GROUP7","HANSEREPAIR","HCCR","HCS","HKL UCS","KRAUSELAGER","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTHNEU","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","NTB","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","SWT","TANKFELD","TCO","TWS","UCS","UNIKAI","UNITAINER","VETI","WCS","WÖHRMANN"];
+const LOCS_SERVER="fl_locs_server",LOCS_PENDING="fl_locs_pending";
+let LOCS=LOCS_BASE.slice();
+function normLoc(v){return String(v||"").replace(/\s+/g," ").trim().toUpperCase()}
+function rebuildLocs(){
+ const all=new Set(LOCS_BASE);
+ ls.get(LOCS_SERVER,[]).concat(ls.get(LOCS_PENDING,[])).forEach(n=>{n=normLoc(n);if(n)all.add(n)});
+ LOCS=Array.from(all).sort((a,b)=>a.localeCompare(b,"de"));
+}
+rebuildLocs();
+function locDist(a,b){
+ const m=a.length,n=b.length;let p=[];for(let j=0;j<=n;j++)p[j]=j;
+ for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}
+ return p[n];
+}
+function similarLoc(v){
+ if(v.length<4)return "";
+ const max=v.length>=8?2:1;let best="",bd=99;
+ LOCS.forEach(l=>{const d=locDist(v,l);if(d>0&&d<=max&&d<bd){bd=d;best=l}});
+ return best;
+}
 
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
@@ -175,8 +195,13 @@ function validateFormats(){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(parsed.getTime())||parsed.getFullYear()!==Number(date.slice(0,4))||parsed.getMonth()+1!==Number(date.slice(5,7))||parsed.getDate()!==Number(date.slice(8,10)))return formatError("dt","Bitte ein gültiges Datum eingeben");
  for(const id of ["von","nach"]){
   const value=$(id).value.trim().toUpperCase();
-  if(!LOCS.includes(value))return formatError(id,"Bitte einen Ort aus der Vorschlagsliste auswählen");
-  $(id).value=value;
+  const name=normLoc(value);
+  if(!LOCS.includes(name)){
+   if(!/^[A-ZÄÖÜ0-9][A-ZÄÖÜ0-9 &.\/\-]{1,39}$/.test(name))return formatError(id,"Ort: 2 bis 40 Zeichen (Buchstaben, Zahlen, & . / -)");
+   const sim=similarLoc(name);
+   if(sim&&confirm("Meinten Sie \""+sim+"\"?\n\nOK = \""+sim+"\" verwenden\nAbbrechen = \""+name+"\" als neuen Ort speichern"))$(id).value=sim;
+   else $(id).value=name;
+  }else $(id).value=name;
  }
  for(const id of (V.size==="2x20"?["cn1","cn2"]:["cn1"])){
   const value=$(id).value.trim().toUpperCase();
@@ -212,6 +237,7 @@ $("save").addEventListener("click",()=>{
   container2:two?$("cn2").value.trim().toUpperCase():"",
   lv:V.lv,chassis:ch,chassisANummer:ca,
   auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false,syncProtocol:SYNC_PROTOCOL};
+ [e.von,e.nach].forEach(addLocation);
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  // Die alte Warteschlange bleibt unverändert gespeichert und wird nicht mehr übertragen.
  ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).concat([e]));
@@ -221,19 +247,39 @@ $("save").addEventListener("click",()=>{
  $("von-sugg").style.display="none";$("nach-sugg").style.display="none";
  V.size="";V.lv="";setSeg("sSize","");setSeg("sLV","");onSize();
  dtTouched=false;$("dt").value=today();setTag();
- render();toast("Gespeichert");flush();
+ render();toast("Gespeichert");flush();syncLocations();
 });
 
+function addLocation(name){
+ name=normLoc(name);if(!name||LOCS.includes(name))return;
+ const pend=ls.get(LOCS_PENDING,[]);if(!pend.includes(name))pend.push(name);
+ ls.set(LOCS_PENDING,pend);rebuildLocs();
+}
+let locBusy=false;
+async function syncLocations(){
+ if(locBusy||!navigator.onLine||SCRIPT_URL.indexOf("HIER_")===0)return;
+ locBusy=true;
+ try{
+  let pend=ls.get(LOCS_PENDING,[]);
+  for(const name of pend.slice()){
+   const j=await syncRequest({method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"addLocation",name:name,secret:SECRET,syncProtocol:SYNC_PROTOCOL})});
+   if(!j||(j.status!=="ok"&&j.status!=="dup"))break;
+   ls.set(LOCS_PENDING,ls.get(LOCS_PENDING,[]).filter(x=>x!==name));
+  }
+  const j=await syncRequest({method:"GET",cache:"no-store"},"?action=locations&secret="+encodeURIComponent(SECRET));
+  if(j&&j.status==="ok"&&Array.isArray(j.locations)){ls.set(LOCS_SERVER,j.locations.map(normLoc).filter(Boolean));rebuildLocs()}
+ }catch(error){}finally{locBusy=false}
+}
 let busy=false,syncNoticeShown=false;
 function syncUpdateNotice(){
  if(syncNoticeShown)return;
  syncNoticeShown=true;toast("Übertragung bitte aktualisieren. Eintrag bleibt auf diesem Gerät gespeichert.");
 }
-async function syncRequest(options){
+async function syncRequest(options,query){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),15000);
  try{
-  const r=await fetch(SCRIPT_URL,Object.assign({},options,{signal:controller.signal}));
+  const r=await fetch(SCRIPT_URL+(query||""),Object.assign({},options,{signal:controller.signal}));
   if(!r.ok)throw new Error("Übertragung nicht erreichbar");
   return await r.json();
  }finally{clearTimeout(timer)}
@@ -263,8 +309,9 @@ function render(){
   <div class="m">${e.fahrtnr?esc(e.fahrtnr)+" · ":""}${c} · ${esc(e.groesse)} · ${e.lv==="L"?"Leer":"Voll"}</div></div>`}).join(""):'<div class="empty">Noch keine Einträge</div>';
 }
 function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
-window.addEventListener("online",()=>{net();flush()});window.addEventListener("offline",net);
-net();render();flush();setInterval(flush,30000);
+window.addEventListener("online",()=>{net();flush();syncLocations()});window.addEventListener("offline",net);
+net();render();flush();syncLocations();setInterval(flush,30000);setInterval(syncLocations,300000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncLocations()});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
