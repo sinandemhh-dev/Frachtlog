@@ -88,6 +88,23 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 
 <div class="card"><h2>Meine Einträge heute</h2><div id="list"><div class="empty">Noch keine Einträge</div></div></div>
 </main>
+<div id="dlg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-start;justify-content:center;padding:16px;overflow:auto"><div class="card" style="width:100%;max-width:420px;margin:0 auto">
+ <h2 id="dlg-t">Fahrt</h2>
+ <div id="dlg-edit-box">
+  <div class="row"><div class="f"><label>Von *</label><input id="x_von" autocomplete="off" autocapitalize="characters"></div><div class="f"><label>Nach *</label><input id="x_nach" autocomplete="off" autocapitalize="characters"></div></div>
+  <div class="f"><label>Größe *</label><div class="seg" id="x_size"><button type="button" data-v="20">20</button><button type="button" data-v="40">40</button><button type="button" data-v="45">45</button><button type="button" data-v="2x20">2×20</button></div></div>
+  <div class="f"><label>L / V *</label><div class="seg" id="x_lv"><button type="button" data-v="L">Leer</button><button type="button" data-v="V">Voll</button></div></div>
+  <div class="f"><label>Containernummer *</label><input id="x_cn1" autocomplete="off" autocapitalize="characters"></div>
+  <div class="f" id="x_box2" style="display:none"><label>Containernummer 2 *</label><input id="x_cn2" autocomplete="off" autocapitalize="characters"></div>
+  <div class="f"><label>Auftragsnummer *</label><input id="x_an" autocomplete="off"></div>
+  <div class="row"><div class="f"><label>Chassis Kennzeichen *</label><input id="x_ch" autocomplete="off" autocapitalize="characters"></div><div class="f"><label>Chassis A-Nummer *</label><input id="x_ca" autocomplete="off" autocapitalize="characters"></div></div>
+  <div class="f"><label>Probleme</label><input id="x_bm" autocomplete="off"></div>
+ </div>
+ <div id="dlg-msg" style="display:none;font-size:15px;font-weight:700;margin:6px 0 12px">Diese Fahrt wirklich löschen?</div>
+ <button class="btn" id="dlg-save">Korrektur speichern</button>
+ <button class="btn" id="dlg-del" style="margin-top:8px;background:#b00">Löschen</button>
+ <button class="btn" id="dlg-x" style="margin-top:8px;background:#888">Abbrechen</button>
+</div></div>
 <div id="toast"></div>
 
 <script>
@@ -259,6 +276,88 @@ $("save").addEventListener("click",()=>{
  render();toast("Gespeichert");flush();syncLocations();
 });
 
+/* Korrigieren / Löschen: nur in der Liste "Meine Einträge heute" */
+function queueReplace(id,item){
+ const q=ls.get(SYNC_QUEUE,[]);const i=q.findIndex(x=>x&&x.id===id);
+ if(i>=0)q[i]=item(q[i]);else q.push(item(null));
+ ls.set(SYNC_QUEUE,q);
+}
+function commitEdit(e){
+ e.sent=false;
+ ls.set("fl_h",ls.get("fl_h",[]).map(x=>x.id===e.id?e:x));
+ queueReplace(e.id,old=>old&&old.action?Object.assign({},e,{action:old.action}):(old?e:Object.assign({},e,{action:"update"})));
+}
+function removeEntry(id){
+ ls.set("fl_h",ls.get("fl_h",[]).filter(x=>x.id!==id));
+ queueReplace(id,()=>({id:id,action:"delete",syncProtocol:SYNC_PROTOCOL}));
+}
+const X={size:"",lv:""};
+function xSet(id,key){$(id).querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===X[key]))}
+["x_size","x_lv"].forEach(id=>$(id).addEventListener("click",ev=>{
+ if(ev.target.tagName!=="BUTTON")return;const key=id==="x_size"?"size":"lv";
+ X[key]=ev.target.dataset.v;xSet(id,key);$(id).classList.remove("err");
+ if(key==="size")$("x_box2").style.display=X.size==="2x20"?"block":"none";
+}));
+let dlgId=null,delArmed=false;
+function xFields(){return ["x_von","x_nach","x_cn1","x_cn2","x_an","x_ch","x_ca","x_bm"]}
+function openDlg(id){
+ const e=ls.get("fl_h",[]).find(x=>x.id===id);if(!e)return;
+ dlgId=id;delArmed=false;
+ $("dlg-t").textContent="Fahrt "+(e.fahrtnr||"");
+ $("x_von").value=e.von;$("x_nach").value=e.nach;$("x_cn1").value=e.container1;$("x_cn2").value=e.container2||"";
+ $("x_an").value=e.auftragsnummer;$("x_ch").value=e.chassis;$("x_ca").value=e.chassisANummer;$("x_bm").value=e.bemerkung||"";
+ X.size=e.groesse;X.lv=e.lv;xSet("x_size","size");xSet("x_lv","lv");
+ $("x_box2").style.display=X.size==="2x20"?"block":"none";
+ xFields().forEach(f=>{$(f).classList.remove("err");$(f).setCustomValidity("")});
+ $("dlg-edit-box").style.display="block";$("dlg-msg").style.display="none";
+ $("dlg-save").style.display="block";$("dlg-del").textContent="Löschen";$("dlg").style.display="flex";
+}
+function closeDlg(){$("dlg").style.display="none";dlgId=null;delArmed=false}
+function xError(id,msg){const el=$(id);el.classList.add("err");toast(msg);el.focus();return false}
+function xValidate(){
+ const g=id=>$(id).value.trim();
+ for(const id of ["x_von","x_nach"]){
+  const name=normLoc(g(id));
+  if(!name)return xError(id,"Bitte alle Pflichtfelder ausfüllen");
+  if(!LOCS.includes(name)){
+   if(!/^[A-ZÄÖÜ0-9][A-ZÄÖÜ0-9 &.\/\-]{1,39}$/.test(name))return xError(id,"Ort: 2 bis 40 Zeichen (Buchstaben, Zahlen, & . / -)");
+   const sim=similarLoc(name);
+   $(id).value=(sim&&confirm("Meinten Sie \""+sim+"\"?\n\nOK = \""+sim+"\" verwenden\nAbbrechen = \""+name+"\" als neuen Ort speichern"))?sim:name;
+  }else $(id).value=name;
+ }
+ const two=X.size==="2x20";
+ for(const id of (two?["x_cn1","x_cn2"]:["x_cn1"])){
+  const value=g(id).toUpperCase();
+  if(!/^[A-Z]{3}[UJZ] ?[0-9]{3}\.?[0-9]{3}-?[0-9]$/.test(value))return xError(id,"Containernummer: 4 Buchstaben (Endung U/J/Z) und 7 Ziffern, z. B. TLLU 111.222-3");
+  const c=value.replace(/[ .-]/g,"");$(id).value=c.slice(0,4)+" "+c.slice(4,7)+"."+c.slice(7,10)+"-"+c.slice(10);
+ }
+ if(two&&$("x_cn1").value===$("x_cn2").value)return xError("x_cn2","Bitte zwei unterschiedliche Containernummern eingeben");
+ if(!/^[0-9]{2}-[0-9]{5}\.[0-9]{3}-[0-9]+(\.[0-9]+)?$/.test(g("x_an")))return xError("x_an","Auftragsnummer: z. B. 20-95625.002-1 oder 20-95625.002-1.1");
+ $("x_ch").value=g("x_ch").replace(/\s+/g,"").toUpperCase();$("x_ca").value=g("x_ca").replace(/\s+/g,"").toUpperCase();
+ if(!/^[A-ZÄÖÜ]{1,3}[A-Z]{1,2}[0-9]{2,4}$/.test($("x_ch").value))return xError("x_ch","Chassis Kennzeichen: Buchstaben und 2 bis 4 Ziffern, z. B. HBHL111");
+ if(!$("x_ca").value)return xError("x_ca","Bitte alle Pflichtfelder ausfüllen");
+ if(!["20","40","45","2x20"].includes(X.size)||!["L","V"].includes(X.lv)){toast("Bitte Größe und L/V auswählen");return false}
+ if($("x_bm").value.length>1000)return xError("x_bm","Bemerkung: maximal 1000 Zeichen");
+ return true;
+}
+xFields().forEach(f=>$(f).addEventListener("input",()=>{$(f).classList.remove("err")}));
+$("dlg-x").addEventListener("click",closeDlg);
+$("dlg").addEventListener("click",ev=>{if(ev.target===$("dlg"))closeDlg()});
+$("dlg-save").addEventListener("click",()=>{
+ const old=ls.get("fl_h",[]).find(x=>x.id===dlgId);if(!old){closeDlg();return}
+ if(!xValidate())return;
+ const e=Object.assign({},old,{von:$("x_von").value.trim(),nach:$("x_nach").value.trim(),groesse:X.size,lv:X.lv,
+  container1:$("x_cn1").value.trim().toUpperCase(),container2:X.size==="2x20"?$("x_cn2").value.trim().toUpperCase():"",
+  auftragsnummer:$("x_an").value.trim(),chassis:$("x_ch").value,chassisANummer:$("x_ca").value,bemerkung:$("x_bm").value.trim(),syncProtocol:SYNC_PROTOCOL});
+ [e.von,e.nach].forEach(addLocation);
+ commitEdit(e);closeDlg();render();toast("Korrektur gespeichert");flush();syncLocations();
+});
+$("dlg-del").addEventListener("click",()=>{
+ if(!delArmed){delArmed=true;$("dlg-edit-box").style.display="none";$("dlg-save").style.display="none";$("dlg-msg").style.display="block";$("dlg-del").textContent="Ja, löschen";return}
+ const id=dlgId;closeDlg();removeEntry(id);render();toast("Gelöscht");flush();
+});
+$("list").addEventListener("click",ev=>{const el=ev.target.closest(".e[data-id]");if(el)openDlg(el.dataset.id)});
+
 function addLocation(name){
  name=normLoc(name);if(!name||LOCS.includes(name))return;
  const pend=ls.get(LOCS_PENDING,[]);if(!pend.includes(name))pend.push(name);
@@ -306,7 +405,7 @@ async function flush(){
    }
    const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h);
    // Zwischenzeitlich gespeicherte Fahrten bleiben in der aktuellen Warteschlange.
-   ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).filter(x=>x.id!==e.id));
+   ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).filter(x=>!(x.id===e.id&&(x.action||"")===(e.action||""))));
   }
  }catch(error){}finally{busy=false;render()}
 }
@@ -314,7 +413,7 @@ function render(){
  const h=ls.get("fl_h",[]).filter(e=>e.datum===today());
  $("list").innerHTML=h.length?h.map(e=>{
   const c=e.groesse==="2x20"?`${esc(e.container1)||"—"} + ${esc(e.container2)||"—"}`:`${esc(e.container1)||"—"}`;
-  return `<div class="e"><div class="t"><span>${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
+  return `<div class="e" data-id="${esc(e.id)}" style="cursor:pointer"><div class="t"><span>${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
   <div class="m">${e.fahrtnr?esc(e.fahrtnr)+" · ":""}${c} · ${esc(e.groesse)} · ${e.lv==="L"?"Leer":"Voll"}</div></div>`}).join(""):'<div class="empty">Noch keine Einträge</div>';
 }
 function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
