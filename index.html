@@ -141,16 +141,18 @@ function onSize(){
  $("l1").textContent=two?"Containernummer 1 *":"Containernummer *";
 }
 
-/* Vorschläge ab dem ersten Buchstaben; nur Einträge aus der Liste. */
+/* Vorschläge ab dem zweiten Buchstaben; nur Einträge aus der Liste. */
 function setupAC(id){
  const inp=$(id),box=$(id+"-sugg");
  function suggest(){
   const v=inp.value.trim().toUpperCase();
-  if(v.length<1){box.style.display="none";return}
+  if(v.length<2){box.style.display="none";return}
   const names=LOCS;
   const m=names.filter(l=>l.startsWith(v)).concat(names.filter(l=>!l.startsWith(v)&&l.includes(v))).slice(0,6);
-  box.innerHTML=m.map(x=>`<button type="button" data-location="${esc(x)}">${esc(x)}</button>`).join("");
-  box.style.display=m.length?"block":"none";
+  const isNew=v.length>=2&&!LOCS.includes(v)&&/^[A-ZÄÖÜ0-9][A-ZÄÖÜ0-9 &.\/\-]{1,39}$/.test(normLoc(v));
+  box.innerHTML=m.map(x=>`<button type="button" data-location="${esc(x)}">${esc(x)}</button>`).join("")
+   +(isNew?`<button type="button" data-newloc="${esc(normLoc(v))}" style="font-weight:700">+ „${esc(normLoc(v))}“ speichern</button>`:"");
+  box.style.display=box.innerHTML?"block":"none";
  }
  inp.addEventListener("input",suggest);
  inp.addEventListener("focus",suggest);
@@ -158,6 +160,13 @@ function setupAC(id){
   if(e.key==="Escape"||e.key==="Enter")box.style.display="none";
  });
  box.addEventListener("click",e=>{
+  const nb=e.target.closest("button[data-newloc]");
+  if(nb&&box.contains(nb)){
+   const name=nb.dataset.newloc;const sim=similarLoc(name);
+   if(sim&&confirm("Meinten Sie \""+sim+"\"?\n\nOK = \""+sim+"\" verwenden\nAbbrechen = \""+name+"\" als neuen Ort speichern")){inp.value=sim}
+   else{addLocation(name);inp.value=name;toast("„"+name+"“ gespeichert");syncLocations()}
+   inp.classList.remove("err");inp.setCustomValidity("");box.style.display="none";return;
+  }
   const option=e.target.closest("button[data-location]");
   if(!option||!box.contains(option))return;
   inp.value=option.dataset.location;inp.classList.remove("err");inp.setCustomValidity("");box.style.display="none";
