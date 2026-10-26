@@ -202,7 +202,7 @@ let dtTouched=false;
 $("dt").value=today();setTag();
 $("dt").addEventListener("input",()=>{dtTouched=true;setTag()});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!dtTouched){$("dt").value=today();setTag()}});
-["fz","fa","ca"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
+["fz","fa","ca","ch"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
 seg("sSize","size",onSize);seg("sLV","lv");
 if(SCRIPT_URL.indexOf("HIER_")===0)$("warn").style.display="block";
 
@@ -255,7 +255,7 @@ $("save").addEventListener("click",()=>{
  if(!ok){toast("Bitte alle Pflichtfelder ausfüllen");return}
  if(!validateFormats())return;
  const fz=$("fz").value.trim(),fa=$("fa").value.trim();
- ["fz","fa","ca"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
+ ["fz","fa","ca","ch"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
  const ch=$("ch").value.trim(),ca=$("ca").value.trim();
  $("fn").value=String(nextFahrtnummer());
  const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value,tag:$("tg").value,
@@ -271,7 +271,7 @@ $("save").addEventListener("click",()=>{
  ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).concat([e]));
  ls.set("fl_next_fahrtnummer",Number(e.fahrtnr)+1);
  $("fn").value=String(nextFahrtnummer());
- ["an","von","nach","cn1","cn2","ch","bm"].forEach(id=>$(id).value="");
+ ["an","von","nach","cn1","cn2","bm"].forEach(id=>$(id).value="");
  $("von-sugg").style.display="none";$("nach-sugg").style.display="none";
  V.size="";V.lv="";setSeg("sSize","");setSeg("sLV","");onSize();
  dtTouched=false;$("dt").value=today();setTag();
