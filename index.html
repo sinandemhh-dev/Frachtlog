@@ -83,7 +83,6 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
   <div class="f"><label>Chassis A-Nummer *</label><input id="ca" placeholder="A11" autocapitalize="characters" autocomplete="off"></div>
  </div>
  <div class="f"><label>Probleme</label><input id="bm" placeholder="Wartezeit? / Bekleme?" autocomplete="off"></div>
- <div id="chkline" style="font-size:14px;background:#eee;border-radius:8px;padding:9px 11px;margin-bottom:10px;line-height:1.35"></div>
  <button class="btn" id="save">Eintrag speichern</button>
 </div>
 
@@ -204,18 +203,6 @@ $("dt").value=today();setTag();
 $("dt").addEventListener("input",()=>{dtTouched=true;setTag()});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!dtTouched){$("dt").value=today();setTag()}});
 ["fz","fa","ca","ch"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
-/* Hinweis über dem Speichern-Knopf: aktuelles Chassis, bei jedem Eintrag sichtbar */
-function updateChkLine(){
- const box=$("chkline"),ch=$("ch").value.trim(),ca=$("ca").value.trim();
- box.textContent="";
- if(!ch&&!ca){box.style.display="none";return}
- box.style.display="block";
- box.appendChild(document.createTextNode("Chassis: "));
- const b=document.createElement("b");b.textContent=(ch||"–")+" / "+(ca||"–");box.appendChild(b);
- box.appendChild(document.createTextNode(" – stimmt das noch?"));
-}
-["ch","ca"].forEach(id=>$(id).addEventListener("input",updateChkLine));
-updateChkLine();
 seg("sSize","size",onSize);seg("sLV","lv");
 if(SCRIPT_URL.indexOf("HIER_")===0)$("warn").style.display="block";
 
@@ -288,7 +275,7 @@ $("save").addEventListener("click",()=>{
  $("von-sugg").style.display="none";$("nach-sugg").style.display="none";
  V.size="";V.lv="";setSeg("sSize","");setSeg("sLV","");onSize();
  dtTouched=false;$("dt").value=today();setTag();
- render();toast("Gespeichert · Chassis "+ch+" / "+ca);flush();syncLocations();
+ render();toast("Gespeichert");flush();syncLocations();
 });
 
 /* Korrigieren / Löschen: nur in der Liste "Meine Einträge heute" */
