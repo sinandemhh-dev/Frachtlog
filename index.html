@@ -55,7 +55,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 
 <div class="card"><h2>Fahrt</h2>
  <div class="row">
-  <div class="f"><label>Fahrzeug Kennzeichen *</label><input id="fz" placeholder="HHOL1110" autocapitalize="characters" autocomplete="off"></div>
+  <div class="f"><label>Fahrzeug Kennzeichen *</label><input id="fz" translate="no" placeholder="HHOL1110" autocapitalize="characters" autocomplete="off"></div>
   <div class="f"><label>Fahrer *</label><input id="fa" placeholder="Name"></div>
  </div>
  <div class="row">
@@ -67,20 +67,20 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 
 <div class="card"><h2>Fahrstrecke &amp; Container</h2>
  <div class="f"><label>Fahrtnummer (automatisch)</label><input id="fn" value="" placeholder="wird beim Senden vergeben" readonly autocomplete="off"></div>
- <div class="f"><label>Auftragsnummer *</label><input id="an" placeholder="20-95625.002-1" autocomplete="off"></div>
+ <div class="f"><label>Auftragsnummer *</label><input id="an" translate="no" placeholder="20-95625.002-1" autocomplete="off"></div>
  <div class="row">
-  <div class="f"><label for="von">Von *</label><input id="von" autocomplete="off" placeholder="CTA / CTB …" autocapitalize="characters"><div id="von-sugg" class="sugg"></div></div>
-  <div class="f"><label for="nach">Nach *</label><input id="nach" autocomplete="off" placeholder="PRAHL&amp;BARSOE / SCANGLOBAL …" autocapitalize="characters"><div id="nach-sugg" class="sugg"></div></div>
+  <div class="f"><label for="von">Von *</label><input id="von" translate="no" autocomplete="off" placeholder="CTA / CTB …" autocapitalize="characters"><div id="von-sugg" class="sugg" translate="no"></div></div>
+  <div class="f"><label for="nach">Nach *</label><input id="nach" translate="no" autocomplete="off" placeholder="PRAHL&amp;BARSOE / SCANGLOBAL …" autocapitalize="characters"><div id="nach-sugg" class="sugg" translate="no"></div></div>
  </div>
  <div class="f"><label>Größe *</label>
   <div class="seg" id="sSize"><button data-v="20">20</button><button data-v="40">40</button><button data-v="45">45</button><button data-v="2x20">2×20</button></div>
  </div>
- <div class="f"><label id="l1">Containernummer *</label><input id="cn1" placeholder="TLLU 111.222-3" autocapitalize="characters" autocomplete="off"></div>
- <div class="f" id="box2" style="display:none"><label>Containernummer 2 *</label><input id="cn2" placeholder="TLLU 111.222-3" autocapitalize="characters" autocomplete="off"></div>
+ <div class="f"><label id="l1">Containernummer *</label><input id="cn1" translate="no" placeholder="TLLU 111.222-3" autocapitalize="characters" autocomplete="off"></div>
+ <div class="f" id="box2" style="display:none"><label>Containernummer 2 *</label><input id="cn2" translate="no" placeholder="TLLU 111.222-3" autocapitalize="characters" autocomplete="off"></div>
  <div class="f"><label>L / V *</label><div class="seg" id="sLV"><button data-v="L">Leer</button><button data-v="V">Voll</button></div></div>
  <div class="row">
-  <div class="f"><label>Chassis Kennzeichen *</label><input id="ch" placeholder="HBHL111" autocapitalize="characters" autocomplete="off"></div>
-  <div class="f"><label>Chassis A-Nummer *</label><input id="ca" placeholder="A11" autocapitalize="characters" autocomplete="off"></div>
+  <div class="f"><label>Chassis Kennzeichen *</label><input id="ch" translate="no" placeholder="HBHL111" autocapitalize="characters" autocomplete="off"></div>
+  <div class="f"><label>Chassis A-Nummer *</label><input id="ca" translate="no" placeholder="A11" autocapitalize="characters" autocomplete="off"></div>
  </div>
  <div class="f"><label>Probleme</label><input id="bm" placeholder="Wartezeit? / Bekleme?" autocomplete="off"></div>
  <button class="btn" id="save">Eintrag speichern</button>
@@ -93,7 +93,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
  <div id="dlg-edit-box">
   <div class="row"><div class="f"><label>Datum *</label><input id="x_dt" type="date"></div><div class="f"><label>Fahrtnummer (automatisch)</label><input id="x_fn" readonly autocomplete="off"></div></div>
   <div class="row"><div class="f"><label>Fahrzeug Kennzeichen *</label><input id="x_fz" autocomplete="off" autocapitalize="characters"></div><div class="f"><label>Fahrer *</label><input id="x_fa" autocomplete="off"></div></div>
-  <div class="row"><div class="f"><label>Von *</label><input id="x_von" autocomplete="off" autocapitalize="characters"></div><div class="f"><label>Nach *</label><input id="x_nach" autocomplete="off" autocapitalize="characters"></div></div>
+  <div class="row"><div class="f"><label>Von *</label><input id="x_von" translate="no" autocomplete="off" autocapitalize="characters"><div id="x_von-sugg" class="sugg" translate="no"></div></div><div class="f"><label>Nach *</label><input id="x_nach" translate="no" autocomplete="off" autocapitalize="characters"><div id="x_nach-sugg" class="sugg" translate="no"></div></div></div>
   <div class="f"><label>Größe *</label><div class="seg" id="x_size"><button type="button" data-v="20">20</button><button type="button" data-v="40">40</button><button type="button" data-v="45">45</button><button type="button" data-v="2x20">2×20</button></div></div>
   <div class="f"><label>L / V *</label><div class="seg" id="x_lv"><button type="button" data-v="L">Leer</button><button type="button" data-v="V">Voll</button></div></div>
   <div class="f"><label>Containernummer *</label><input id="x_cn1" autocomplete="off" autocapitalize="characters"></div>
@@ -188,7 +188,7 @@ function setupAC(id){
  });
  document.addEventListener("click",e=>{if(e.target!==inp&&!box.contains(e.target))box.style.display="none"});
 }
-setupAC("von");setupAC("nach");
+setupAC("von");setupAC("nach");setupAC("x_von");setupAC("x_nach");
 
 /* Kennzeichen: Leerzeichen entfernen, Großbuchstaben */
 ["fz","ch","ca"].forEach(id=>$(id).addEventListener("input",()=>{const el=$(id);const p=el.selectionStart;el.value=el.value.replace(/\s+/g,"").toUpperCase()}));
@@ -297,6 +297,7 @@ function xFields(){return ["x_dt","x_fn","x_fz","x_fa","x_von","x_nach","x_cn1",
 function openDlg(id){
  const e=ls.get("fl_h",[]).find(x=>x.id===id);if(!e)return;
  dlgId=id;delArmed=false;
+ $("x_von-sugg").style.display="none";$("x_nach-sugg").style.display="none";
  $("dlg-t").textContent="Fahrt "+(e.fahrtnr||"");
  $("x_dt").value=e.datum;$("x_fn").value=e.fahrtnr||"";$("x_fz").value=e.fahrzeug;$("x_fa").value=e.fahrer;
  $("x_von").value=e.von;$("x_nach").value=e.nach;$("x_cn1").value=e.container1;$("x_cn2").value=e.container2||"";
@@ -413,8 +414,8 @@ function render(){
  const h=ls.get("fl_h",[]).filter(e=>e.datum===today());
  $("list").innerHTML=h.length?h.map(e=>{
   const c=e.groesse==="2x20"?`${esc(e.container1)||"—"} + ${esc(e.container2)||"—"}`:`${esc(e.container1)||"—"}`;
-  return `<div class="e" data-id="${esc(e.id)}" style="cursor:pointer"><div class="t"><span>${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
-  <div class="m">${e.fahrtnr?esc(e.fahrtnr)+" · ":""}${c} · ${esc(e.groesse)} · ${e.lv==="L"?"Leer":"Voll"}</div></div>`}).join(""):'<div class="empty">Noch keine Einträge</div>';
+  return `<div class="e" data-id="${esc(e.id)}" style="cursor:pointer"><div class="t"><span translate="no">${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
+  <div class="m"><span translate="no">${e.fahrtnr?esc(e.fahrtnr)+" · ":""}${c} · ${esc(e.groesse)}</span> · ${e.lv==="L"?"Leer":"Voll"}</div></div>`}).join(""):'<div class="empty">Noch keine Einträge</div>';
 }
 function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
 window.addEventListener("online",()=>{net();flush();syncLocations()});window.addEventListener("offline",net);
