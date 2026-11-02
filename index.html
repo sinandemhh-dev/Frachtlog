@@ -66,7 +66,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 </div>
 
 <div class="card"><h2>Fahrstrecke &amp; Container</h2>
- <div class="f"><label>Fahrtnummer *</label><input id="fn" value="1" readonly autocomplete="off"></div>
+ <div class="f"><label>Fahrtnummer (automatisch)</label><input id="fn" value="" placeholder="wird beim Senden vergeben" readonly autocomplete="off"></div>
  <div class="f"><label>Auftragsnummer *</label><input id="an" placeholder="20-95625.002-1" autocomplete="off"></div>
  <div class="row">
   <div class="f"><label for="von">Von *</label><input id="von" autocomplete="off" placeholder="CTA / CTB …" autocapitalize="characters"><div id="von-sugg" class="sugg"></div></div>
@@ -91,7 +91,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 <div id="dlg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-start;justify-content:center;padding:16px;overflow:auto"><div class="card" style="width:100%;max-width:420px;margin:0 auto">
  <h2 id="dlg-t">Fahrt</h2>
  <div id="dlg-edit-box">
-  <div class="row"><div class="f"><label>Datum *</label><input id="x_dt" type="date"></div><div class="f"><label>Fahrtnummer *</label><input id="x_fn" inputmode="numeric" autocomplete="off"></div></div>
+  <div class="row"><div class="f"><label>Datum *</label><input id="x_dt" type="date"></div><div class="f"><label>Fahrtnummer (automatisch)</label><input id="x_fn" readonly autocomplete="off"></div></div>
   <div class="row"><div class="f"><label>Fahrzeug Kennzeichen *</label><input id="x_fz" autocomplete="off" autocapitalize="characters"></div><div class="f"><label>Fahrer *</label><input id="x_fa" autocomplete="off"></div></div>
   <div class="row"><div class="f"><label>Von *</label><input id="x_von" autocomplete="off" autocapitalize="characters"></div><div class="f"><label>Nach *</label><input id="x_nach" autocomplete="off" autocapitalize="characters"></div></div>
   <div class="f"><label>Größe *</label><div class="seg" id="x_size"><button type="button" data-v="20">20</button><button type="button" data-v="40">40</button><button type="button" data-v="45">45</button><button type="button" data-v="2x20">2×20</button></div></div>
@@ -121,12 +121,8 @@ const V={size:"",lv:""};
 const SYNC_SCHEMA="ohmlog-app-fields-v2";
 const SYNC_PROTOCOL="ohmlog-new-saves-v1";
 const SYNC_QUEUE="fl_q_new_saves_v1";
-function nextFahrtnummer(){
- const n=Number(ls.get("fl_next_fahrtnummer",1));
- return Number.isSafeInteger(n)&&n>0?n:1;
-}
-$("fn").value=String(nextFahrtnummer());
-const LOCS_BASE=["ANHALT","BASTE&LANGE","BETTENDUSCHER","BLUEWATER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DCP","DEUFOL","DSV TCO","DUSS","EKOM","EUGBHV","EUGS","FIEGE HCCR","FREUDENBERG HCCR","GROUP7","HANSEREPAIR","HCCR","HCS","HKL UCS","KRAUSELAGER","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTHNEU","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","NTB","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","SWT","TANKFELD","TCO","TWS","UCS","UNIKAI","UNITAINER","VETI","WCS","WÖHRMANN"];
+/* Die Fahrtnummer vergibt das System (Apps-Script) beim Senden: pro Monat fortlaufend, ohne Doppelte. */
+const LOCS_BASE=["ANHALT","BASTE&LANGE","BETTENDUSCHER","BLUEWATER","CCIS","CMR","CST","CTA","CTB","CTB DCC","CTT","DCC","DCP","DEUFOL","DSV TCO","DUSS","EKOM","EUGBHV","EUGS","FIEGE HCCR","FREUDENBERG HCCR","GROUP7","HANSEREPAIR","HCCR","HCS","HKL UCS","KRAUSELAGER","KRAUSELAGER CTB","KRAUSELAGER EUGS","KTH","LAGERHAUS","LTHCHASSIS","LTHNEU","LTM","MEDREPAIR","MONDELEZ","NEUKIRCH MEDREPAIR","NTB","POCO REMAIN","POCO TWS","PRAHL&BARSOE","REMAIN","S&O","SCANGLOBAL","SWT","TANKFELD","TCO","TOOLPORT","TWS","UCS","UNIKAI","UNITAINER","VETI","WCS","WÖHRMANN"];
 const LOCS_SERVER="fl_locs_server",LOCS_PENDING="fl_locs_pending";
 let LOCS=LOCS_BASE.slice();
 function normLoc(v){return String(v||"").replace(/\s+/g," ").trim().toUpperCase()}
@@ -214,7 +210,6 @@ function validateFormats(){
  const checks=[
   ["ch",/^[A-ZÄÖÜ]{1,3}[A-Z]{1,2}[0-9]{2,4}$/, "Chassis Kennzeichen: Buchstaben und 2 bis 4 Ziffern, z. B. HBHL111"],
   ["fa",/^[\p{L}][\p{L}\p{M} .’'\-]{1,79}$/u, "Fahrer: Bitte einen Namen ohne Zahlen eingeben"],
-  ["fn",/^[1-9][0-9]*$/, "Fahrtnummer muss eine positive ganze Zahl sein"],
   ["an",/^[0-9]{2}-[0-9]{5}\.[0-9]{3}-[0-9]+(\.[0-9]+)?$/, "Auftragsnummer: z. B. 20-95625.002-1 oder 20-95625.002-1.1"],
  ];
  for(const [id,re,message] of checks){$(id).value=$(id).value.trim();if(!re.test($(id).value))return formatError(id,message)}
@@ -247,7 +242,7 @@ function reqSeg(id,v){$(id).classList.toggle("err",!v);return !!v}
 
 $("save").addEventListener("click",()=>{
  let ok=true;
- ["fz","fa","dt","fn","an","von","nach","cn1","ch","ca"].forEach(id=>{if(!req(id))ok=false});
+ ["fz","fa","dt","an","von","nach","cn1","ch","ca"].forEach(id=>{if(!req(id))ok=false});
  const two=V.size==="2x20";
  if(two&&!req("cn2"))ok=false;
  if(!reqSeg("sSize",V.size))ok=false;
@@ -257,9 +252,8 @@ $("save").addEventListener("click",()=>{
  const fz=$("fz").value.trim(),fa=$("fa").value.trim();
  ["fz","fa","ca","ch"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
  const ch=$("ch").value.trim(),ca=$("ca").value.trim();
- $("fn").value=String(nextFahrtnummer());
  const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value,tag:$("tg").value,
-  fahrzeug:fz,fahrer:fa,auftraggeber:"LTH",fahrtnr:$("fn").value.trim(),
+  fahrzeug:fz,fahrer:fa,auftraggeber:"LTH",fahrtnr:"",
   von:$("von").value.trim().toUpperCase(),nach:$("nach").value.trim().toUpperCase(),
   groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),
   container2:two?$("cn2").value.trim().toUpperCase():"",
@@ -269,8 +263,6 @@ $("save").addEventListener("click",()=>{
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  // Die alte Warteschlange bleibt unverändert gespeichert und wird nicht mehr übertragen.
  ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).concat([e]));
- ls.set("fl_next_fahrtnummer",Number(e.fahrtnr)+1);
- $("fn").value=String(nextFahrtnummer());
  ["an","von","nach","cn1","cn2","bm"].forEach(id=>$(id).value="");
  $("von-sugg").style.display="none";$("nach-sugg").style.display="none";
  V.size="";V.lv="";setSeg("sSize","");setSeg("sLV","");onSize();
@@ -306,7 +298,7 @@ function openDlg(id){
  const e=ls.get("fl_h",[]).find(x=>x.id===id);if(!e)return;
  dlgId=id;delArmed=false;
  $("dlg-t").textContent="Fahrt "+(e.fahrtnr||"");
- $("x_dt").value=e.datum;$("x_fn").value=e.fahrtnr;$("x_fz").value=e.fahrzeug;$("x_fa").value=e.fahrer;
+ $("x_dt").value=e.datum;$("x_fn").value=e.fahrtnr||"";$("x_fz").value=e.fahrzeug;$("x_fa").value=e.fahrer;
  $("x_von").value=e.von;$("x_nach").value=e.nach;$("x_cn1").value=e.container1;$("x_cn2").value=e.container2||"";
  $("x_an").value=e.auftragsnummer;$("x_ch").value=e.chassis;$("x_ca").value=e.chassisANummer;$("x_bm").value=e.bemerkung||"";
  X.size=e.groesse;X.lv=e.lv;xSet("x_size","size");xSet("x_lv","lv");
@@ -321,7 +313,6 @@ function xValidate(){
  const g=id=>$(id).value.trim();
  const dv=g("x_dt"),dp=new Date(dv+"T12:00:00");
  if(!/^\d{4}-\d{2}-\d{2}$/.test(dv)||!Number.isFinite(dp.getTime())||dp.getFullYear()!==Number(dv.slice(0,4))||dp.getMonth()+1!==Number(dv.slice(5,7))||dp.getDate()!==Number(dv.slice(8,10)))return xError("x_dt","Bitte ein gültiges Datum eingeben");
- if(!/^[1-9][0-9]*$/.test(g("x_fn")))return xError("x_fn","Fahrtnummer muss eine positive ganze Zahl sein");
  $("x_fz").value=g("x_fz").replace(/\s+/g,"").toUpperCase();
  if(!$("x_fz").value)return xError("x_fz","Bitte alle Pflichtfelder ausfüllen");
  if(!/^[\p{L}][\p{L}\p{M} .’'\-]{1,79}$/u.test(g("x_fa")))return xError("x_fa","Fahrer: Bitte einen Namen ohne Zahlen eingeben");
@@ -355,7 +346,7 @@ $("dlg").addEventListener("click",ev=>{if(ev.target===$("dlg"))closeDlg()});
 $("dlg-save").addEventListener("click",()=>{
  const old=ls.get("fl_h",[]).find(x=>x.id===dlgId);if(!old){closeDlg();return}
  if(!xValidate())return;
- const e=Object.assign({},old,{datum:$("x_dt").value,tag:TAGE[new Date($("x_dt").value+"T12:00:00").getDay()],fahrtnr:$("x_fn").value.trim(),fahrzeug:$("x_fz").value,fahrer:$("x_fa").value.trim(),von:$("x_von").value.trim(),nach:$("x_nach").value.trim(),groesse:X.size,lv:X.lv,
+ const e=Object.assign({},old,{datum:$("x_dt").value,tag:TAGE[new Date($("x_dt").value+"T12:00:00").getDay()],fahrzeug:$("x_fz").value,fahrer:$("x_fa").value.trim(),von:$("x_von").value.trim(),nach:$("x_nach").value.trim(),groesse:X.size,lv:X.lv,
   container1:$("x_cn1").value.trim().toUpperCase(),container2:X.size==="2x20"?$("x_cn2").value.trim().toUpperCase():"",
   auftragsnummer:$("x_an").value.trim(),chassis:$("x_ch").value,chassisANummer:$("x_ca").value,bemerkung:$("x_bm").value.trim(),syncProtocol:SYNC_PROTOCOL});
  [e.von,e.nach].forEach(addLocation);
@@ -412,7 +403,7 @@ async function flush(){
     if(j&&j.code==="outdated-client")syncUpdateNotice();
     break;
    }
-   const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h);
+   const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id){x.sent=true;if(!e.action&&j.fahrtnr!==undefined&&j.fahrtnr!=="")x.fahrtnr=String(j.fahrtnr)}});ls.set("fl_h",h);
    // Zwischenzeitlich gespeicherte Fahrten bleiben in der aktuellen Warteschlange.
    ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).filter(x=>!(x.id===e.id&&(x.action||"")===(e.action||""))));
   }
