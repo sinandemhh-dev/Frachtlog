@@ -31,6 +31,8 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
 .seg{display:flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{flex:1;padding:12px 0;background:#f7f7f7;border:0;color:var(--text);font-size:15px;font-weight:700}
 .seg button.on{background:var(--ink);color:#fff}
+.seg.wait button{font-size:13px;padding:12px 2px;border-right:1px solid var(--line)}
+.seg.wait button:last-child{border-right:0}
 .err{border-color:#d00 !important}
 .btn{width:100%;padding:15px;background:var(--ink);color:#fff;border:0;border-radius:9px;font-size:17px;font-weight:800}
 .btn:active{background:var(--ink2)}
@@ -82,7 +84,8 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
   <div class="f"><label>Chassis Kennzeichen *</label><input id="ch" translate="no" placeholder="HBHL111" autocapitalize="characters" autocomplete="off"></div>
   <div class="f"><label>Chassis A-Nummer *</label><input id="ca" translate="no" placeholder="A11" autocapitalize="characters" autocomplete="off"></div>
  </div>
- <div class="f"><label>Probleme</label><input id="bm" placeholder="Wartezeit? / Bekleme?" autocomplete="off"></div>
+ <div class="f"><label>Wartezeit (falls gewartet)</label><div class="seg wait" id="sWait" translate="no"><button type="button" data-v="Unter 1 Std">Unter 1 Std</button><button type="button" data-v="1 Std">1 Std</button><button type="button" data-v="2 Std">2 Std</button><button type="button" data-v="Über 2 Std">Über 2 Std</button></div></div>
+ <div class="f"><label>Probleme</label><input id="bm" placeholder="Probleme / Bemerkungen" autocomplete="off"></div>
  <button class="btn" id="save">Eintrag speichern</button>
 </div>
 
@@ -101,6 +104,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-i
   <div class="f" id="x_box2" style="display:none"><label>Containernummer 2 *</label><input id="x_cn2" autocomplete="off" autocapitalize="characters"></div>
   <div class="f"><label>Auftragsnummer *</label><input id="x_an" autocomplete="off"></div>
   <div class="row"><div class="f"><label>Chassis Kennzeichen *</label><input id="x_ch" autocomplete="off" autocapitalize="characters"></div><div class="f"><label>Chassis A-Nummer *</label><input id="x_ca" autocomplete="off" autocapitalize="characters"></div></div>
+  <div class="f"><label>Wartezeit (falls gewartet)</label><div class="seg wait" id="x_wait" translate="no"><button type="button" data-v="Unter 1 Std">Unter 1 Std</button><button type="button" data-v="1 Std">1 Std</button><button type="button" data-v="2 Std">2 Std</button><button type="button" data-v="Über 2 Std">Über 2 Std</button></div></div>
   <div class="f"><label>Probleme</label><input id="x_bm" autocomplete="off"></div>
  </div>
  <div id="dlg-msg" style="display:none;font-size:15px;font-weight:700;margin:6px 0 12px">Diese Fahrt wirklich löschen?</div>
@@ -118,7 +122,8 @@ const SECRET="frachtlog-n7q4x2"; /* muss identisch mit SECRET im Apps-Script sei
 const $=id=>document.getElementById(id);
 const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-const V={size:"",lv:""};
+const V={size:"",lv:"",wait:""};
+const WAITS=["Unter 1 Std","1 Std","2 Std","Über 2 Std"];
 const SYNC_SCHEMA="ohmlog-app-fields-v2";
 const SYNC_PROTOCOL="ohmlog-new-saves-v1";
 const SYNC_QUEUE="fl_q_new_saves_v1";
@@ -221,6 +226,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!dtTouche
 ["fz","fa","ca","ch"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
 $("ag").value=ls.get("fl_ag","LTH");
 seg("sSize","size",onSize);seg("sLV","lv");
+$("sWait").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;V.wait=V.wait===b.dataset.v?"":b.dataset.v;setSeg("sWait",V.wait)});
 if(SCRIPT_URL.indexOf("HIER_")===0)$("warn").style.display="block";
 
 function formatError(id,message){
@@ -255,6 +261,7 @@ function validateFormats(){
  }
  if(V.size==="2x20"&&$("cn1").value===$("cn2").value)return formatError("cn2","Bitte zwei unterschiedliche Containernummern eingeben");
  if(!["20","40","45","2x20"].includes(V.size)||!["L","V"].includes(V.lv)){toast("Bitte Größe und L/V auswählen");return false}
+ if(V.wait&&!WAITS.includes(V.wait)){V.wait="";setSeg("sWait","")}
  if($("bm").value.length>1000)return formatError("bm","Bemerkung: maximal 1000 Zeichen");
  return true;
 }
@@ -282,14 +289,14 @@ $("save").addEventListener("click",()=>{
   groesse:V.size,container1:$("cn1").value.trim().toUpperCase(),
   container2:two?$("cn2").value.trim().toUpperCase():"",
   lv:V.lv,chassis:ch,chassisANummer:ca,
-  auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),sent:false,syncProtocol:SYNC_PROTOCOL};
+  auftragsnummer:$("an").value.trim(),bemerkung:$("bm").value.trim(),wartezeit:V.wait,sent:false,syncProtocol:SYNC_PROTOCOL};
  [e.von,e.nach].forEach(addLocation);
  ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
  // Die alte Warteschlange bleibt unverändert gespeichert und wird nicht mehr übertragen.
  ls.set(SYNC_QUEUE,ls.get(SYNC_QUEUE,[]).concat([e]));
  ["an","von","nach","cn1","cn2","bm"].forEach(id=>$(id).value="");
  $("von-sugg").style.display="none";$("nach-sugg").style.display="none";
- V.size="";V.lv="";setSeg("sSize","");setSeg("sLV","");onSize();
+ V.size="";V.lv="";V.wait="";setSeg("sSize","");setSeg("sLV","");setSeg("sWait","");onSize();
  dtTouched=false;$("dt").value=today();setTag();
  render();toast("Gespeichert");flush();syncLocations();
 });
@@ -309,13 +316,14 @@ function removeEntry(id){
  ls.set("fl_h",ls.get("fl_h",[]).filter(x=>x.id!==id));
  queueReplace(id,()=>({id:id,action:"delete",syncProtocol:SYNC_PROTOCOL}));
 }
-const X={size:"",lv:""};
+const X={size:"",lv:"",wait:""};
 function xSet(id,key){$(id).querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===X[key]))}
 ["x_size","x_lv"].forEach(id=>$(id).addEventListener("click",ev=>{
  if(ev.target.tagName!=="BUTTON")return;const key=id==="x_size"?"size":"lv";
  X[key]=ev.target.dataset.v;xSet(id,key);$(id).classList.remove("err");
  if(key==="size")$("x_box2").style.display=X.size==="2x20"?"block":"none";
 }));
+$("x_wait").addEventListener("click",ev=>{const b=ev.target.closest("button");if(!b)return;X.wait=X.wait===b.dataset.v?"":b.dataset.v;xSet("x_wait","wait")});
 let dlgId=null,delArmed=false;
 function xFields(){return ["x_dt","x_fn","x_ag","x_fz","x_fa","x_von","x_nach","x_cn1","x_cn2","x_an","x_ch","x_ca","x_bm"]}
 function openDlg(id){
@@ -326,7 +334,7 @@ function openDlg(id){
  $("x_dt").value=e.datum;$("x_ag").value=e.auftraggeber||"LTH";$("x_ag-sugg").style.display="none";$("x_fn").value=e.fahrtnr||"";$("x_fz").value=e.fahrzeug;$("x_fa").value=e.fahrer;
  $("x_von").value=e.von;$("x_nach").value=e.nach;$("x_cn1").value=e.container1;$("x_cn2").value=e.container2||"";
  $("x_an").value=e.auftragsnummer;$("x_ch").value=e.chassis;$("x_ca").value=e.chassisANummer;$("x_bm").value=e.bemerkung||"";
- X.size=e.groesse;X.lv=e.lv;xSet("x_size","size");xSet("x_lv","lv");
+ X.size=e.groesse;X.lv=e.lv;X.wait=WAITS.includes(e.wartezeit)?e.wartezeit:"";xSet("x_size","size");xSet("x_lv","lv");xSet("x_wait","wait");
  $("x_box2").style.display=X.size==="2x20"?"block":"none";
  xFields().forEach(f=>{$(f).classList.remove("err");$(f).setCustomValidity("")});
  $("dlg-edit-box").style.display="block";$("dlg-msg").style.display="none";
@@ -375,7 +383,7 @@ $("dlg-save").addEventListener("click",()=>{
  if(!xValidate())return;
  const e=Object.assign({},old,{datum:$("x_dt").value,tag:TAGE[new Date($("x_dt").value+"T12:00:00").getDay()],auftraggeber:$("x_ag").value,fahrzeug:$("x_fz").value,fahrer:$("x_fa").value.trim(),von:$("x_von").value.trim(),nach:$("x_nach").value.trim(),groesse:X.size,lv:X.lv,
   container1:$("x_cn1").value.trim().toUpperCase(),container2:X.size==="2x20"?$("x_cn2").value.trim().toUpperCase():"",
-  auftragsnummer:$("x_an").value.trim(),chassis:$("x_ch").value,chassisANummer:$("x_ca").value,bemerkung:$("x_bm").value.trim(),syncProtocol:SYNC_PROTOCOL});
+  auftragsnummer:$("x_an").value.trim(),chassis:$("x_ch").value,chassisANummer:$("x_ca").value,bemerkung:$("x_bm").value.trim(),wartezeit:X.wait,syncProtocol:SYNC_PROTOCOL});
  [e.von,e.nach].forEach(addLocation);
  commitEdit(e);closeDlg();render();toast("Korrektur gespeichert");flush();syncLocations();
 });
@@ -441,7 +449,7 @@ function render(){
  $("list").innerHTML=h.length?h.map(e=>{
   const c=e.groesse==="2x20"?`${esc(e.container1)||"—"} + ${esc(e.container2)||"—"}`:`${esc(e.container1)||"—"}`;
   return `<div class="e" data-id="${esc(e.id)}" style="cursor:pointer"><div class="t"><span translate="no">${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
-  <div class="m"><span translate="no">${esc(e.auftraggeber||"LTH")} · ${e.fahrtnr?esc(e.fahrtnr)+" · ":""}${c} · ${esc(e.groesse)}</span> · ${e.lv==="L"?"Leer":"Voll"}</div></div>`}).join(""):'<div class="empty">Noch keine Einträge</div>';
+  <div class="m"><span translate="no">${esc(e.auftraggeber||"LTH")} · ${e.fahrtnr?esc(e.fahrtnr)+" · ":""}${c} · ${esc(e.groesse)}</span> · ${e.lv==="L"?"Leer":"Voll"}${e.wartezeit?` · <span translate="no">Wartezeit ${esc(e.wartezeit)}</span>`:""}</div></div>`}).join(""):'<div class="empty">Noch keine Einträge</div>';
 }
 function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
 window.addEventListener("online",()=>{net();flush();syncLocations()});window.addEventListener("offline",net);
