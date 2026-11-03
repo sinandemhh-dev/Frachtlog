@@ -190,9 +190,9 @@ function setupAC(id){
  document.addEventListener("click",e=>{if(e.target!==inp&&!box.contains(e.target))box.style.display="none"});
 }
 setupAC("von");setupAC("nach");setupAC("x_von");setupAC("x_nach");
-/* Auftraggeber: nur LTH oder ANCO; Vorschläge sofort beim Antippen/Tippen */
-const AGS=["LTH","ANCO"];
-function normAg(v){return String(v||"").replace(/\s+/g,"").toUpperCase()}
+/* Auftraggeber: nur LTH oder ANCOTRANS; Vorschläge sofort beim Antippen/Tippen */
+const AGS=["LTH","ANCOTRANS"];
+function normAg(v){const n=String(v||"").replace(/\s+/g,"").toUpperCase();return n==="ANCO"?"ANCOTRANS":n}
 function setupAG(id){
  const inp=$(id),box=$(id+"-sugg");
  function show(all){
@@ -270,7 +270,7 @@ $("save").addEventListener("click",()=>{
  if(!reqSeg("sLV",V.lv))ok=false;
  if(!ok){toast("Bitte alle Pflichtfelder ausfüllen");return}
  $("ag").value=normAg($("ag").value)||"LTH";
- if(AGS.indexOf($("ag").value)<0)return formatError("ag","Auftraggeber: bitte LTH oder ANCO wählen");
+ if(AGS.indexOf($("ag").value)<0)return formatError("ag","Auftraggeber: bitte LTH oder ANCOTRANS wählen");
  if(!validateFormats())return;
  ls.set("fl_ag",$("ag").value);
  const fz=$("fz").value.trim(),fa=$("fa").value.trim();
@@ -339,7 +339,7 @@ function xValidate(){
  const dv=g("x_dt"),dp=new Date(dv+"T12:00:00");
  if(!/^\d{4}-\d{2}-\d{2}$/.test(dv)||!Number.isFinite(dp.getTime())||dp.getFullYear()!==Number(dv.slice(0,4))||dp.getMonth()+1!==Number(dv.slice(5,7))||dp.getDate()!==Number(dv.slice(8,10)))return xError("x_dt","Bitte ein gültiges Datum eingeben");
  $("x_ag").value=normAg($("x_ag").value)||"LTH";
- if(AGS.indexOf($("x_ag").value)<0)return xError("x_ag","Auftraggeber: bitte LTH oder ANCO wählen");
+ if(AGS.indexOf($("x_ag").value)<0)return xError("x_ag","Auftraggeber: bitte LTH oder ANCOTRANS wählen");
  $("x_fz").value=g("x_fz").replace(/\s+/g,"").toUpperCase();
  if(!$("x_fz").value)return xError("x_fz","Bitte alle Pflichtfelder ausfüllen");
  if(!/^[\p{L}][\p{L}\p{M} .’'\-]{1,79}$/u.test(g("x_fa")))return xError("x_fa","Fahrer: Bitte einen Namen ohne Zahlen eingeben");
