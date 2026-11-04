@@ -144,8 +144,9 @@ function locDist(a,b){
  return p[n];
 }
 function resolveNewLoc(name){
- const hit=name.length>=4?LOCS.find(l=>l.length>name.length&&l.indexOf(name)>=0):"";
- const ex=hit||similarLoc(name);
+ const have=LOCS.filter(l=>l.indexOf(name)>=0);
+ if(have.length){alert("In der Liste gibt es schon: "+have.slice(0,4).join(", ")+"\n\nBitte aus der Liste w\u00E4hlen.");return null}
+ const ex=similarLoc(name);
  if(ex){alert("\u201E"+name+"\u201C gibt es nicht, aber \u201E"+ex+"\u201C ist in der Liste.\n\nBitte \u201E"+ex+"\u201C aus der Liste w\u00E4hlen.");return ex}
  if(!confirm("Neuer Ort: \u201E"+name+"\u201C\n\nWirklich ein NEUER Ort? Bitte Schreibweise pr\u00FCfen."))return null;
  const t=normLoc((prompt("Zur Best\u00E4tigung \u201E"+name+"\u201C noch einmal eingeben:")||"").trim().toUpperCase());
@@ -179,9 +180,9 @@ function setupAC(id){
   if(v.length<2){box.style.display="none";return}
   const names=LOCS;
   const m=names.filter(l=>l.startsWith(v)).concat(names.filter(l=>!l.startsWith(v)&&l.includes(v))).slice(0,6);
-  const isNew=v.length>=2&&!LOCS.includes(v)&&/^[A-ZÄÖÜ0-9][A-ZÄÖÜ0-9 &.\/\-]{1,39}$/.test(normLoc(v));
+  const isNew=v.length>=2&&m.length===0&&!LOCS.includes(v)&&/^[A-ZÄÖÜ0-9][A-ZÄÖÜ0-9 &.\/\-]{1,39}$/.test(normLoc(v));
   box.innerHTML=m.map(x=>`<button type="button" data-location="${esc(x)}">${esc(x)}</button>`).join("")
-   +(isNew?`<button type="button" data-newloc="${esc(normLoc(v))}" style="font-weight:700">+ „${esc(normLoc(v))}“ speichern</button>`:"");
+   +(isNew?`<button type="button" data-newloc="${esc(normLoc(v))}" style="font-weight:700">Andere: „${esc(normLoc(v))}“ als neuen Ort anlegen</button>`:"");
   box.style.display=box.innerHTML?"block":"none";
  }
  inp.addEventListener("input",suggest);
