@@ -143,6 +143,15 @@ function locDist(a,b){
  for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}
  return p[n];
 }
+function resolveNewLoc(name){
+ const hit=name.length>=4?LOCS.find(l=>l.length>name.length&&l.indexOf(name)>=0):"";
+ const ex=hit||similarLoc(name);
+ if(ex){alert("\u201E"+name+"\u201C gibt es nicht, aber \u201E"+ex+"\u201C ist in der Liste.\n\nBitte \u201E"+ex+"\u201C aus der Liste w\u00E4hlen.");return ex}
+ if(!confirm("Neuer Ort: \u201E"+name+"\u201C\n\nWirklich ein NEUER Ort? Bitte Schreibweise pr\u00FCfen."))return null;
+ const t=normLoc((prompt("Zur Best\u00E4tigung \u201E"+name+"\u201C noch einmal eingeben:")||"").trim().toUpperCase());
+ if(t!==name){alert("Eingabe stimmt nicht \u00FCberein. Ort wurde nicht gespeichert.");return null}
+ return name;
+}
 function similarLoc(v){
  if(v.length<4)return "";
  const max=v.length>=8?2:1;let best="",bd=99;
@@ -183,8 +192,9 @@ function setupAC(id){
  box.addEventListener("click",e=>{
   const nb=e.target.closest("button[data-newloc]");
   if(nb&&box.contains(nb)){
-   const name=nb.dataset.newloc;const sim=similarLoc(name);
-   if(sim&&confirm("Meinten Sie \""+sim+"\"?\n\nOK = \""+sim+"\" verwenden\nAbbrechen = \""+name+"\" als neuen Ort speichern")){inp.value=sim}
+   const name=nb.dataset.newloc;const r=resolveNewLoc(name);
+   if(r===null){return}
+   if(r!==name){inp.value=r}
    else{addLocation(name);inp.value=name;toast("„"+name+"“ gespeichert");syncLocations()}
    inp.classList.remove("err");inp.setCustomValidity("");box.style.display="none";return;
   }
@@ -248,9 +258,9 @@ function validateFormats(){
   const name=normLoc(value);
   if(!LOCS.includes(name)){
    if(!/^[A-ZÄÖÜ0-9][A-ZÄÖÜ0-9 &.\/\-]{1,39}$/.test(name))return formatError(id,"Ort: 2 bis 40 Zeichen (Buchstaben, Zahlen, & . / -)");
-   const sim=similarLoc(name);
-   if(sim&&confirm("Meinten Sie \""+sim+"\"?\n\nOK = \""+sim+"\" verwenden\nAbbrechen = \""+name+"\" als neuen Ort speichern"))$(id).value=sim;
-   else $(id).value=name;
+   const r=resolveNewLoc(name);
+   if(r===null)return formatError(id,"Neuer Ort nicht best\u00E4tigt");
+   $(id).value=r;
   }else $(id).value=name;
  }
  for(const id of (V.size==="2x20"?["cn1","cn2"]:["cn1"])){
@@ -356,8 +366,9 @@ function xValidate(){
   if(!name)return xError(id,"Bitte alle Pflichtfelder ausfüllen");
   if(!LOCS.includes(name)){
    if(!/^[A-ZÄÖÜ0-9][A-ZÄÖÜ0-9 &.\/\-]{1,39}$/.test(name))return xError(id,"Ort: 2 bis 40 Zeichen (Buchstaben, Zahlen, & . / -)");
-   const sim=similarLoc(name);
-   $(id).value=(sim&&confirm("Meinten Sie \""+sim+"\"?\n\nOK = \""+sim+"\" verwenden\nAbbrechen = \""+name+"\" als neuen Ort speichern"))?sim:name;
+   const r=resolveNewLoc(name);
+   if(r===null)return xError(id,"Neuer Ort nicht best\u00E4tigt");
+   $(id).value=r;
   }else $(id).value=name;
  }
  const two=X.size==="2x20";
