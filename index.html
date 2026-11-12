@@ -209,6 +209,12 @@ setupAC("von");setupAC("nach");setupAC("x_von");setupAC("x_nach");
 /* Auftraggeber: nur LTH oder ANCOTRANS; Vorschläge sofort beim Antippen/Tippen */
 const AGS=["LTH","ANCOTRANS"];
 function normAg(v){const n=String(v||"").replace(/\s+/g,"").toUpperCase();return n==="ANCO"?"ANCOTRANS":n}
+const AN_LTH=/^[0-9]{2}-[0-9]{5}\.[0-9]{3}-[0-9]+(\.[0-9]+)?$/,AN_ANCO=/^[A-Z]{4}[0-9]{6}$/;
+const AN_MSG_LTH="Auftragsnummer: z. B. 20-95625.002-1 oder 20-95625.002-1.1",AN_MSG_ANCO="Auftragsnummer (ANCOTRANS): 4 Buchstaben und 6 Ziffern, z. B. HAMM401469";
+function isAnco(agId){return normAg($(agId).value)==="ANCOTRANS"}
+function updAgHints(){
+ const a=isAnco("ag");$("an").placeholder=a?"HAMM401469":"20-95625.002-1";$("ca").placeholder=a?"5846":"A11";
+}
 function setupAG(id){
  const inp=$(id),box=$(id+"-sugg");
  function show(all){
@@ -216,15 +222,15 @@ function setupAG(id){
   box.innerHTML=m.map(a=>`<button type="button" data-ag="${a}">${a}</button>`).join("");
   box.style.display=m.length?"block":"none";
  }
- inp.addEventListener("input",()=>show());inp.addEventListener("focus",()=>show(true));
+ inp.addEventListener("input",()=>{show();updAgHints()});inp.addEventListener("focus",()=>show(true));
  inp.addEventListener("keydown",e=>{if(e.key==="Escape"||e.key==="Enter")box.style.display="none"});
  box.addEventListener("click",e=>{
   const b=e.target.closest("button[data-ag]");if(!b||!box.contains(b))return;
-  inp.value=b.dataset.ag;inp.classList.remove("err");inp.setCustomValidity("");box.style.display="none";
+  inp.value=b.dataset.ag;inp.classList.remove("err");inp.setCustomValidity("");box.style.display="none";updAgHints();
  });
  document.addEventListener("click",e=>{if(e.target!==inp&&!box.contains(e.target))box.style.display="none"});
 }
-setupAG("ag");setupAG("x_ag");
+setupAG("ag");setupAG("x_ag");updAgHints();
 
 /* Kennzeichen: Leerzeichen entfernen, Großbuchstaben */
 ["fz","ch","ca"].forEach(id=>$(id).addEventListener("input",()=>{const el=$(id);const p=el.selectionStart;el.value=el.value.replace(/\s+/g,"").toUpperCase()}));
@@ -235,7 +241,7 @@ $("dt").value=today();setTag();
 $("dt").addEventListener("input",()=>{dtTouched=true;setTag()});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!dtTouched){$("dt").value=today();setTag()}});
 ["fz","fa","ca","ch"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
-$("ag").value=ls.get("fl_ag","LTH");
+$("ag").value=ls.get("fl_ag","LTH");updAgHints();
 seg("sSize","size",onSize);seg("sLV","lv");
 $("sWait").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;V.wait=V.wait===b.dataset.v?"":b.dataset.v;setSeg("sWait",V.wait)});
 if(SCRIPT_URL.indexOf("HIER_")===0)$("warn").style.display="block";
@@ -248,8 +254,9 @@ function validateFormats(){
  const checks=[
   ["ch",/^[A-ZÄÖÜ]{1,3}[A-Z]{1,2}[0-9]{2,4}$/, "Chassis Kennzeichen: Buchstaben und 2 bis 4 Ziffern, z. B. HBHL111"],
   ["fa",/^[\p{L}][\p{L}\p{M} .’'\-]{1,79}$/u, "Fahrer: Bitte einen Namen ohne Zahlen eingeben"],
-  ["an",/^[0-9]{2}-[0-9]{5}\.[0-9]{3}-[0-9]+(\.[0-9]+)?$/, "Auftragsnummer: z. B. 20-95625.002-1 oder 20-95625.002-1.1"],
+  ["an",isAnco("ag")?AN_ANCO:AN_LTH, isAnco("ag")?AN_MSG_ANCO:AN_MSG_LTH],
  ];
+ if(isAnco("ag"))$("an").value=$("an").value.replace(/\s+/g,"").toUpperCase();
  for(const [id,re,message] of checks){$(id).value=$(id).value.trim();if(!re.test($(id).value))return formatError(id,message)}
  const date=$("dt").value;
  const parsed=new Date(date+"T12:00:00");
@@ -379,7 +386,8 @@ function xValidate(){
   const c=value.replace(/[ .-]/g,"");$(id).value=c.slice(0,4)+" "+c.slice(4,7)+"."+c.slice(7,10)+"-"+c.slice(10);
  }
  if(two&&$("x_cn1").value===$("x_cn2").value)return xError("x_cn2","Bitte zwei unterschiedliche Containernummern eingeben");
- if(!/^[0-9]{2}-[0-9]{5}\.[0-9]{3}-[0-9]+(\.[0-9]+)?$/.test(g("x_an")))return xError("x_an","Auftragsnummer: z. B. 20-95625.002-1 oder 20-95625.002-1.1");
+ if(isAnco("x_ag"))$("x_an").value=g("x_an").replace(/\s+/g,"").toUpperCase();
+ if(!(isAnco("x_ag")?AN_ANCO:AN_LTH).test(g("x_an")))return xError("x_an",isAnco("x_ag")?AN_MSG_ANCO:AN_MSG_LTH);
  $("x_ch").value=g("x_ch").replace(/\s+/g,"").toUpperCase();$("x_ca").value=g("x_ca").replace(/\s+/g,"").toUpperCase();
  if(!/^[A-ZÄÖÜ]{1,3}[A-Z]{1,2}[0-9]{2,4}$/.test($("x_ch").value))return xError("x_ch","Chassis Kennzeichen: Buchstaben und 2 bis 4 Ziffern, z. B. HBHL111");
  if(!$("x_ca").value)return xError("x_ca","Bitte alle Pflichtfelder ausfüllen");
